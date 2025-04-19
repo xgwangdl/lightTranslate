@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 @Service
 public class TextToSpeechService {
@@ -19,15 +20,28 @@ public class TextToSpeechService {
     public byte[] tts(String text,String voice) {
         byte[] bytes = null;
         try {
-            ProcessBuilder processBuilder = new ProcessBuilder("python", pythonTtsPath, text, voice);
+            String os = System.getProperty("os.name").toLowerCase();
+            String python;
+
+            if (os.contains("win")) {
+                python = "python";
+            } else if (os.contains("linux") || os.contains("mac")) {
+                python = "/usr/bin/python";
+            } else {
+                throw new UnsupportedOperationException("Unsupported operating system: " + os);
+            }
+            ProcessBuilder processBuilder = new ProcessBuilder(python, pythonTtsPath, text, voice);
 
             // 启动 Python 进程
             Process process = processBuilder.start();
 
             // 获取 Python 输出流（音频数据）
             InputStream inputStream = process.getInputStream();
-
             bytes = inputStreamToBytes(inputStream);
+
+            InputStream errorStream = process.getErrorStream();
+            String errorOutput = new String(errorStream.readAllBytes(), StandardCharsets.UTF_8);
+            System.err.println("错误信息: " + errorOutput);
 
             // 等待进程执行完毕
             int exitCode = process.waitFor();
@@ -35,6 +49,7 @@ public class TextToSpeechService {
                 System.out.println("音频文件已保存为: byte[]");
             } else {
                 System.err.println("Python 脚本执行失败，退出码: " + exitCode);
+
             }
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();

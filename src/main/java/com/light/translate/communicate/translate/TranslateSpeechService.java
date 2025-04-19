@@ -10,6 +10,7 @@ import io.reactivex.Flowable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
@@ -73,23 +74,30 @@ public class TranslateSpeechService {
                                         result.getTranslationResult().getTranslation(targetLanguage);
                                 if (targetTranslation != null) {
                                     if (result.isSentenceEnd()) {
-                                        byte[] tts = textToSpeechService.tts(targetTranslation.getText(), voice);
-                                        if (tts != null && tts.length > 44) {
-                                            if (mergedAudio.size() == 0) {
-                                                // 第一段：完整保留
-                                                mergedAudio.write(tts);
-                                            } else {
-                                                // 后续段：去掉 44 字节的 WAV header
-                                                mergedAudio.write(tts, 44, tts.length - 44);
+                                        if (StringUtils.hasText(targetTranslation.getText())) {
+                                            byte[] tts = textToSpeechService.tts(targetTranslation.getText(), voice);
+                                            if (tts != null && tts.length > 44) {
+                                                if (mergedAudio.size() == 0) {
+                                                    // 第一段：完整保留
+                                                    mergedAudio.write(tts);
+                                                } else {
+                                                    // 后续段：去掉 44 字节的 WAV header
+                                                    mergedAudio.write(tts, 44, tts.length - 44);
+                                                }
                                             }
+                                            translateText.append(targetTranslation.getText());
                                         }
-                                        translateText.append(targetTranslation.getText());
                                     }
                                 }
                             }
                         });
-        byte[] finalAudioBytes = mergedAudio.toByteArray();
-        translateResult.put("audioBytes",fixWavHeader(finalAudioBytes));
+        if (mergedAudio.size() != 0) {
+            byte[] finalAudioBytes = mergedAudio.toByteArray();
+            translateResult.put("audioBytes",fixWavHeader(finalAudioBytes));
+        } else {
+            translateResult.put("audioBytes",null);
+        }
+
         translateResult.put("orignText",orignText.toString());
         translateResult.put("translateText",translateText.toString());
         return translateResult;
