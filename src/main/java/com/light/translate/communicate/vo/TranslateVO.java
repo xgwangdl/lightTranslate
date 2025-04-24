@@ -2,6 +2,7 @@ package com.light.translate.communicate.vo;
 
 public class TranslateVO {
     String audioData;
+    String audioUrl;
     String originText;
     String translateText;
 
@@ -11,6 +12,14 @@ public class TranslateVO {
 
     public void setAudioData(String audioData) {
         this.audioData = audioData;
+    }
+
+    public void setAudioUrl(String audioUrl) {
+        this.audioUrl = audioUrl;
+    }
+
+    public String getAudioUrl() {
+        return audioUrl;
     }
 
     public String getOriginText() {

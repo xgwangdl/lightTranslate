@@ -31,17 +31,18 @@ public class TextToSpeechService {
                 throw new UnsupportedOperationException("Unsupported operating system: " + os);
             }
             ProcessBuilder processBuilder = new ProcessBuilder(python, pythonTtsPath, text, voice);
+            processBuilder.redirectErrorStream(true);
 
             // 启动 Python 进程
             Process process = processBuilder.start();
 
-            // 获取 Python 输出流（音频数据）
-            InputStream inputStream = process.getInputStream();
-            bytes = inputStreamToBytes(inputStream);
-
             InputStream errorStream = process.getErrorStream();
             String errorOutput = new String(errorStream.readAllBytes(), StandardCharsets.UTF_8);
             System.err.println("错误信息: " + errorOutput);
+
+            // 获取 Python 输出流（音频数据）
+            InputStream inputStream = process.getInputStream();
+            bytes = inputStream.readAllBytes();
 
             // 等待进程执行完毕
             int exitCode = process.waitFor();
