@@ -7,6 +7,8 @@ import com.light.translate.communicate.translate.TranslateSpeechService;
 import com.light.translate.communicate.utils.OssUtil;
 import com.light.translate.communicate.vo.TranslateVO;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +28,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/translation")
 public class TranslationController {
+    private static final Logger log = LoggerFactory.getLogger(TranslationController.class);
 
     @Autowired
     private TranslateSpeechService translationService;
@@ -40,26 +43,29 @@ public class TranslationController {
             @RequestParam("sourceLanguage") String sourceLanguage,
             @RequestParam("targetLanguage") String targetLanguage,
             HttpServletResponse response) throws IOException, NoApiKeyException, InterruptedException {
+        log.debug("start");
         // 保存临时文件
-        File tempFile = File.createTempFile("upload", ".aac");
+        File tempFile = File.createTempFile("upload", ".wav");
         audioFile.transferTo(tempFile);
         File convertFile = AudioConverter.convertToWav(tempFile);
 
         String lang = this.dictService.getDictValue("lang", targetLanguage);
+        log.debug("process1");
         Map<String,Object> translateResult = this.translationService.startRecordingAndTranslation(convertFile.getAbsolutePath(), targetLanguage, lang);
-
+        log.debug("process2");
         tempFile.delete();
         convertFile.delete();
 
+        log.debug("process3");
         byte[] bytes = (byte[])translateResult.get("audioBytes");
         InputStream is = new ByteArrayInputStream(bytes);
         String url = ossUtil.upload(is, "audio.mp3");
-
+        log.debug("process4");
         // 将音频数据转换为Base64
-        String base64Audio = Base64.getEncoder().encodeToString(bytes);
+        //String base64Audio = Base64.getEncoder().encodeToString(bytes);
 
         TranslateVO translateVO = new TranslateVO();
-        translateVO.setAudioData(base64Audio);
+        //translateVO.setAudioData(base64Audio);
         translateVO.setAudioUrl(url);
         translateVO.setOriginText((String)translateResult.get("orignText"));
         translateVO.setTranslateText((String)translateResult.get("translateText"));
@@ -69,4 +75,6 @@ public class TranslationController {
                 .body(translateVO);
 
     }
+
+
 }

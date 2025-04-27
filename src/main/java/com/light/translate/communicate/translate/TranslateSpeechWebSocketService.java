@@ -33,8 +33,6 @@ public class TranslateSpeechWebSocketService {
     private TranslateSpeechService translateSpeechService;
 
     @Autowired
-    private OssUtil ossUtil;
-    @Autowired
     private DictService dictService;
 
     public static class SessionState {
@@ -56,6 +54,7 @@ public class TranslateSpeechWebSocketService {
                 SessionState state = sessionStates.get(session.getId());
                 state.targetLanguage = parts[2];
                 state.uuid = parts[3];
+                state.audioBuffer = new ByteArrayOutputStream();
                 session.sendMessage(new TextMessage("STATUS|READY"));
             }
         } catch (Exception e) {
@@ -87,8 +86,6 @@ public class TranslateSpeechWebSocketService {
                         state.targetLanguage,
                         voice
                 );
-
-                this.cleanupSession(session);
             } finally {
                 tempFile.delete();
             }
@@ -96,28 +93,6 @@ public class TranslateSpeechWebSocketService {
         } catch (Exception e) {
             logger.error("Process audio chunk failed", e);
             sendError(session, "Processing error: " + e.getMessage());
-        }
-    }
-
-    private void cleanupSession(WebSocketSession session) {
-        try {
-            SessionState state = sessionStates.get(session.getId());
-            if (state != null && state.audioBuffer.size() > 0) {
-                // 上传最终音频到OSS
-                byte[] finalAudio = translateSpeechService.fixWavHeader(state.audioBuffer.toByteArray());
-                String ossUrl = ossUtil.upload(new ByteArrayInputStream(finalAudio),
-                        "audio_" + session.getId() + "_" + System.currentTimeMillis() + ".mp3");
-
-                // 发送最终结果
-                Map<String, String> finalResult = Map.of(
-                        "type", "FINAL",
-                        "audioUrl", ossUrl,
-                        "uuid", state.uuid
-                );
-                session.sendMessage(new TextMessage(new ObjectMapper().writeValueAsString(finalResult)));
-            }
-        } catch (Exception e) {
-            logger.error("Final upload failed", e);
         }
     }
 

@@ -7,6 +7,7 @@ import com.alibaba.dashscope.audio.asr.translation.results.TranslationRecognizer
 import com.alibaba.dashscope.exception.ApiException;
 import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.light.translate.communicate.utils.OssUtil;
 import io.reactivex.BackpressureStrategy;
 import io.reactivex.Flowable;
 import org.slf4j.Logger;
@@ -28,8 +29,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.*;
 
 @Service
 public class TranslateSpeechService {
@@ -44,6 +48,11 @@ public class TranslateSpeechService {
     @Autowired
     private TextToSpeechService textToSpeechService;
 
+    @Autowired
+    private OssUtil ossUtil;
+
+    ExecutorService executorService = Executors.newFixedThreadPool(2);
+
     public Map<String,Object> startRecordingAndTranslation(String filePath, String targetLanguage, String voice)
             throws ApiException, NoApiKeyException {
         Map<String,Object> translateResult = new HashMap<>();
@@ -51,10 +60,13 @@ public class TranslateSpeechService {
         StringBuilder orignText = new StringBuilder();
         StringBuilder translateText = new StringBuilder();
 
+        logger.debug("createAudioSourceWithControlFromFile start");
         // Create a Flowable<ByteBuffer> for streaming audio data
         Flowable<ByteBuffer> audioSource = createAudioSourceWithControlFromFile(filePath);
+        logger.debug("createAudioSourceWithControlFromFile end");
         // 创建Recognizer
         TranslationRecognizerRealtime translator = new TranslationRecognizerRealtime();
+        logger.debug("创建TranslationRecognizerParam start");
         // 创建TranslationRecognizerParam，audioFrames参数中传入上面创建的Flowable<ByteBuffer>
         TranslationRecognizerParam param =
                 TranslationRecognizerParam.builder()
@@ -67,7 +79,9 @@ public class TranslateSpeechService {
                         .translationEnabled(true)
                         .translationLanguages(new String[] {targetLanguage})
                         .build();
+        logger.debug("创建TranslationRecognizerParam end");
 
+        logger.debug("recognizer start");
         // Stream call interface for streaming audio to recognizer
         translator
                 .streamCall(param, audioSource)
@@ -86,7 +100,9 @@ public class TranslateSpeechService {
                                 if (targetTranslation != null) {
                                     if (result.isSentenceEnd()) {
                                         if (StringUtils.hasText(targetTranslation.getText())) {
+                                            logger.debug("tts start");
                                             byte[] tts = textToSpeechService.tts(targetTranslation.getText(), voice);
+                                            logger.debug("tts start");
                                             if (tts != null && tts.length > 44) {
                                                 if (mergedAudio.size() == 0) {
                                                     // 第一段：完整保留
@@ -102,6 +118,7 @@ public class TranslateSpeechService {
                                 }
                             }
                         });
+        logger.debug("recognizer end");
         if (mergedAudio.size() != 0) {
             byte[] finalAudioBytes = mergedAudio.toByteArray();
             translateResult.put("audioBytes",fixWavHeader(finalAudioBytes));
@@ -111,6 +128,7 @@ public class TranslateSpeechService {
 
         translateResult.put("orignText",orignText.toString());
         translateResult.put("translateText",translateText.toString());
+        logger.debug("startRecordingAndTranslation end");
         return translateResult;
     }
 
@@ -164,29 +182,33 @@ public class TranslateSpeechService {
                              String filePath, String targetLanguage, String voice)
             throws ApiException, NoApiKeyException, IOException {
 
-        ByteArrayOutputStream audioOutput = new ByteArrayOutputStream();
-        StringBuilder originText = new StringBuilder();
-        StringBuilder translatedText = new StringBuilder();
-
+        logger.debug("createAudioSourceWithControlFromFile start");
         Flowable<ByteBuffer> audioSource = createAudioSourceWithControlFromFile(filePath);
+        logger.debug("createAudioSourceWithControlFromFile End");
 
+        logger.debug("buildRecognizerParam start");
         TranslationRecognizerRealtime translator = new TranslationRecognizerRealtime();
         TranslationRecognizerParam param = buildRecognizerParam(targetLanguage);
+        logger.debug("buildRecognizerParam End");
 
+        logger.debug("streamCall start");
+        Phaser phaser = new Phaser(1);
         translator.streamCall(param, audioSource)
                 .blockingForEach(recognitionResult -> {
                     processRecognitionResult(
                             recognitionResult,
                             targetLanguage,
                             voice,
-                            originText,
-                            translatedText,
-                            audioOutput,
                             session,
-                            state
+                            state,
+                            phaser
                     );
                 });
-        state.audioBuffer.write(audioOutput.toByteArray());
+        logger.debug("streamCall end");
+        logger.debug("TTS start");
+        phaser.arriveAndAwaitAdvance();
+        this.cleanupSession(session, state);
+        logger.debug("TTS end");
     }
     private TranslationRecognizerParam buildRecognizerParam(String targetLanguage) {
         return TranslationRecognizerParam.builder()
@@ -204,11 +226,9 @@ public class TranslateSpeechService {
             TranslationRecognizerResult result,
             String targetLanguage,
             String voice,
-            StringBuilder originText,
-            StringBuilder translatedText,
-            ByteArrayOutputStream audioOutput,
             WebSocketSession session,
-            TranslateSpeechWebSocketService.SessionState state) throws IOException {
+            TranslateSpeechWebSocketService.SessionState state,
+            Phaser phaser) throws IOException {
 
         Map<String, Object> translateResult = new HashMap<>();
 
@@ -226,14 +246,35 @@ public class TranslateSpeechService {
             if (translation != null && result.isSentenceEnd()) {
                 String text = translation.getText();
                 if (StringUtils.hasText(text)) {
-                    byte[] ttsAudio = textToSpeechService.tts(text, voice);
+                    phaser.register();
+                    executorService.execute(() -> {
+                        try {
+                            byte[] tts = textToSpeechService.tts(text, voice);
+                            if (tts != null && tts.length > 44) {
+                                if ( state.audioBuffer.size() == 0) {
+                                    // 第一段：完整保留
+                                    state.audioBuffer.write(tts);
+                                } else {
+                                    // 后续段：去掉 44 字节的WAV header
+                                    state.audioBuffer.write(tts, 44, tts.length - 44);
+                                }
+                                //state.audioBuffer.write(audioOutput.toByteArray());
+                            }
+                        } catch (Exception e) {
+
+                        } finally {
+                            phaser.arriveAndDeregister(); // 任务完成
+                        }
+                    });
+
+                    /*byte[] ttsAudio = textToSpeechService.tts(text, voice);
                     if (ttsAudio != null && ttsAudio.length > 44) {
                         if (audioOutput.size() == 0) {
                             audioOutput.write(ttsAudio);
                         } else {
                             audioOutput.write(ttsAudio, 44, ttsAudio.length - 44);
                         }
-                    }
+                    }*/
                     translateResult.put("translatedText", text);
                     sendResults(session, state, translateResult);
                 }
@@ -264,6 +305,32 @@ public class TranslateSpeechService {
             session.sendMessage(new TextMessage(new ObjectMapper().writeValueAsString(middleResult)));
         } catch (IOException e) {
             logger.error("Send results failed", e);
+        }
+    }
+
+    private void cleanupSession(WebSocketSession session, TranslateSpeechWebSocketService.SessionState state) {
+        try {
+            if (state != null && state.audioBuffer.size() > 0) {
+                // 上传最终音频到OSS
+                byte[] finalAudio = this.fixWavHeader(state.audioBuffer.toByteArray());
+                String ossUrl = ossUtil.upload(new ByteArrayInputStream(finalAudio),
+                        "audio_" + session.getId() + "_" + System.currentTimeMillis() + ".mp3");
+
+                // 发送最终结果
+                Map<String, String> finalResult = Map.of(
+                        "type", "FINAL",
+                        "audioUrl", ossUrl,
+                        "uuid", state.uuid
+                );
+                session.sendMessage(new TextMessage(new ObjectMapper().writeValueAsString(finalResult)));
+            } else {
+                Map<String, String> finalResult = Map.of(
+                        "type", "NOFIND"
+                );
+                session.sendMessage(new TextMessage(new ObjectMapper().writeValueAsString(finalResult)));
+            }
+        } catch (Exception e) {
+            logger.error("Final upload failed", e);
         }
     }
 }
