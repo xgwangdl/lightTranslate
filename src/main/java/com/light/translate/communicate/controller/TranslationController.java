@@ -22,7 +22,6 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Base64;
 import java.util.Map;
 
 @RestController
@@ -61,8 +60,6 @@ public class TranslationController {
         InputStream is = new ByteArrayInputStream(bytes);
         String url = ossUtil.upload(is, "audio.mp3");
         log.debug("process4");
-        // 将音频数据转换为Base64
-        //String base64Audio = Base64.getEncoder().encodeToString(bytes);
 
         TranslateVO translateVO = new TranslateVO();
         //translateVO.setAudioData(base64Audio);
@@ -77,4 +74,13 @@ public class TranslationController {
     }
 
 
+    public ResponseEntity<String> translateText(
+            @RequestParam("text") String text,
+            @RequestParam("sourceLanguage") String sourceLanguage,
+            @RequestParam("targetLanguage") String targetLanguage) throws IOException, NoApiKeyException, InterruptedException {
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("{\"text\":\"" + text + "\"}");
+    }
 }

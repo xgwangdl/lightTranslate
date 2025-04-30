@@ -16,12 +16,17 @@ public class WebSocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(translationWebSocketHandler(), "/ws/translation")
                 .setAllowedOrigins("*");
+
+        registry.addHandler(translationWebSocketHandler(), "/ws/realtimetranslation")
+                .setAllowedOrigins("*");
     }
+
 
     @Bean
     public TranslationWebSocketHandler translationWebSocketHandler() {
         return new TranslationWebSocketHandler();
     }
+
     @Bean
     public ServletServerContainerFactoryBean createWebSocketContainer() {
         ServletServerContainerFactoryBean container = new ServletServerContainerFactoryBean();

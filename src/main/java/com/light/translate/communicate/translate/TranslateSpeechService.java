@@ -51,7 +51,7 @@ public class TranslateSpeechService {
     @Autowired
     private OssUtil ossUtil;
 
-    ExecutorService executorService = Executors.newFixedThreadPool(2);
+    ExecutorService executorService = Executors.newFixedThreadPool(1);
 
     public Map<String,Object> startRecordingAndTranslation(String filePath, String targetLanguage, String voice)
             throws ApiException, NoApiKeyException {
@@ -204,11 +204,11 @@ public class TranslateSpeechService {
                             phaser
                     );
                 });
-        logger.debug("streamCall end");
-        logger.debug("TTS start");
-        phaser.arriveAndAwaitAdvance();
-        this.cleanupSession(session, state);
-        logger.debug("TTS end");
+        if (!state.realTimeTranslate) {
+            phaser.arriveAndAwaitAdvance();
+            this.cleanupSession(session, state);
+        }
+
     }
     private TranslationRecognizerParam buildRecognizerParam(String targetLanguage) {
         return TranslationRecognizerParam.builder()
@@ -246,35 +246,28 @@ public class TranslateSpeechService {
             if (translation != null && result.isSentenceEnd()) {
                 String text = translation.getText();
                 if (StringUtils.hasText(text)) {
-                    phaser.register();
-                    executorService.execute(() -> {
-                        try {
-                            byte[] tts = textToSpeechService.tts(text, voice);
-                            if (tts != null && tts.length > 44) {
-                                if ( state.audioBuffer.size() == 0) {
-                                    // 第一段：完整保留
-                                    state.audioBuffer.write(tts);
-                                } else {
-                                    // 后续段：去掉 44 字节的WAV header
-                                    state.audioBuffer.write(tts, 44, tts.length - 44);
+                    if (!state.realTimeTranslate) {
+                        phaser.register();
+                        executorService.execute(() -> {
+                            try {
+                                byte[] tts = textToSpeechService.tts(text, voice);
+                                if (tts != null && tts.length > 44) {
+                                    if (state.audioBuffer.size() == 0) {
+                                        // 第一段：完整保留
+                                        state.audioBuffer.write(tts);
+                                    } else {
+                                        // 后续段：去掉 44 字节的WAV header
+                                        state.audioBuffer.write(tts, 44, tts.length - 44);
+                                    }
                                 }
-                                //state.audioBuffer.write(audioOutput.toByteArray());
+                            } catch (Exception e) {
+
+                            } finally {
+                                phaser.arriveAndDeregister(); // 任务完成
                             }
-                        } catch (Exception e) {
+                        });
+                    }
 
-                        } finally {
-                            phaser.arriveAndDeregister(); // 任务完成
-                        }
-                    });
-
-                    /*byte[] ttsAudio = textToSpeechService.tts(text, voice);
-                    if (ttsAudio != null && ttsAudio.length > 44) {
-                        if (audioOutput.size() == 0) {
-                            audioOutput.write(ttsAudio);
-                        } else {
-                            audioOutput.write(ttsAudio, 44, ttsAudio.length - 44);
-                        }
-                    }*/
                     translateResult.put("translatedText", text);
                     sendResults(session, state, translateResult);
                 }

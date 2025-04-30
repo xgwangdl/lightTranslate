@@ -41,6 +41,8 @@ public class TranslateSpeechWebSocketService {
         StringBuilder translatedText = new StringBuilder();
         String targetLanguage;
         String uuid;
+        boolean realTimeTranslate = false;
+        String selectedRole;
     }
 
     public void initSession(WebSocketSession session) {
@@ -52,8 +54,12 @@ public class TranslateSpeechWebSocketService {
             String[] parts = command.split("\\|");
             if (parts.length >= 3 && "START".equals(parts[0])) {
                 SessionState state = sessionStates.get(session.getId());
+                state.selectedRole = parts[1];
                 state.targetLanguage = parts[2];
                 state.uuid = parts[3];
+                if (parts.length >= 5) {
+                    state.realTimeTranslate = true;
+                }
                 state.audioBuffer = new ByteArrayOutputStream();
                 session.sendMessage(new TextMessage("STATUS|READY"));
             }
@@ -69,7 +75,7 @@ public class TranslateSpeechWebSocketService {
             return;
         }
 
-        String voice = this.dictService.getDictValue("lang", state.targetLanguage);
+        String voice = this.dictService.getDictValue(state.selectedRole, state.targetLanguage);
 
         try {
             // 2. 创建临时文件处理当前分片
