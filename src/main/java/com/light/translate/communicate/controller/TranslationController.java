@@ -1,10 +1,12 @@
 package com.light.translate.communicate.controller;
 
 import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.light.translate.communicate.baidu.BaiduTranslateService;
 import com.light.translate.communicate.services.DictService;
 import com.light.translate.communicate.translate.AudioConverter;
 import com.light.translate.communicate.translate.TranslateSpeechService;
 import com.light.translate.communicate.utils.OssUtil;
+import com.light.translate.communicate.vo.BaiduTranslateVO;
 import com.light.translate.communicate.vo.TranslateVO;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
@@ -35,6 +37,9 @@ public class TranslationController {
     private DictService dictService;
     @Autowired
     private OssUtil ossUtil;
+    @Autowired
+    private BaiduTranslateService baiduTranslateService;
+
 
     @PostMapping("/translate")
     public ResponseEntity<TranslateVO> translateAudio(
@@ -73,14 +78,21 @@ public class TranslationController {
 
     }
 
-
-    public ResponseEntity<String> translateText(
+    @PostMapping("/textTranslate")
+    public ResponseEntity<String> textTranslate(
             @RequestParam("text") String text,
             @RequestParam("sourceLanguage") String sourceLanguage,
-            @RequestParam("targetLanguage") String targetLanguage) throws IOException, NoApiKeyException, InterruptedException {
+            @RequestParam("targetLanguage") String targetLanguage)  {
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body("{\"text\":\"" + text + "\"}");
+        BaiduTranslateVO translate = this.baiduTranslateService.translate(text, sourceLanguage, targetLanguage);
+        if (translate != null && translate.getError_code() == null) {
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(translate.getTrans_result().get(0).getDst());
+        } else {
+            return ResponseEntity.internalServerError()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(null);
+        }
     }
 }

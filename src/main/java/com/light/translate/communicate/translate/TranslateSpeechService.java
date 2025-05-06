@@ -51,7 +51,8 @@ public class TranslateSpeechService {
     @Autowired
     private OssUtil ossUtil;
 
-    ExecutorService executorService = Executors.newFixedThreadPool(1);
+    ExecutorService executorService = Executors.newFixedThreadPool(4);
+    List<CompletableFuture<byte[]>> futures = new ArrayList<>();
 
     public Map<String,Object> startRecordingAndTranslation(String filePath, String targetLanguage, String voice)
             throws ApiException, NoApiKeyException {
@@ -182,17 +183,13 @@ public class TranslateSpeechService {
                              String filePath, String targetLanguage, String voice)
             throws ApiException, NoApiKeyException, IOException {
 
-        logger.debug("createAudioSourceWithControlFromFile start");
+        futures = new ArrayList<>();
         Flowable<ByteBuffer> audioSource = createAudioSourceWithControlFromFile(filePath);
-        logger.debug("createAudioSourceWithControlFromFile End");
 
-        logger.debug("buildRecognizerParam start");
         TranslationRecognizerRealtime translator = new TranslationRecognizerRealtime();
         TranslationRecognizerParam param = buildRecognizerParam(targetLanguage);
-        logger.debug("buildRecognizerParam End");
 
         logger.debug("streamCall start");
-        Phaser phaser = new Phaser(1);
         translator.streamCall(param, audioSource)
                 .blockingForEach(recognitionResult -> {
                     processRecognitionResult(
@@ -200,14 +197,26 @@ public class TranslateSpeechService {
                             targetLanguage,
                             voice,
                             session,
-                            state,
-                            phaser
+                            state
                     );
                 });
-        if (!state.realTimeTranslate) {
-            phaser.arriveAndAwaitAdvance();
-            this.cleanupSession(session, state);
+        for (CompletableFuture<byte[]> future : futures) {
+            try {
+                logger.debug("future.get() start");
+                byte[] tts = future.get();
+                logger.debug("future.get() End");
+                if (tts != null && tts.length > 44) {
+                    if (state.audioBuffer.size() == 0) {
+                        state.audioBuffer.write(tts);
+                    } else {
+                        state.audioBuffer.write(tts, 44, tts.length - 44);
+                    }
+                }
+            } catch (Exception e) {
+                // 处理异常
+            }
         }
+        this.cleanupSession(session, state);
 
     }
     private TranslationRecognizerParam buildRecognizerParam(String targetLanguage) {
@@ -227,8 +236,7 @@ public class TranslateSpeechService {
             String targetLanguage,
             String voice,
             WebSocketSession session,
-            TranslateSpeechWebSocketService.SessionState state,
-            Phaser phaser) throws IOException {
+            TranslateSpeechWebSocketService.SessionState state) throws IOException {
 
         Map<String, Object> translateResult = new HashMap<>();
 
@@ -247,25 +255,12 @@ public class TranslateSpeechService {
                 String text = translation.getText();
                 if (StringUtils.hasText(text)) {
                     if (!state.realTimeTranslate) {
-                        phaser.register();
-                        executorService.execute(() -> {
-                            try {
-                                byte[] tts = textToSpeechService.tts(text, voice);
-                                if (tts != null && tts.length > 44) {
-                                    if (state.audioBuffer.size() == 0) {
-                                        // 第一段：完整保留
-                                        state.audioBuffer.write(tts);
-                                    } else {
-                                        // 后续段：去掉 44 字节的WAV header
-                                        state.audioBuffer.write(tts, 44, tts.length - 44);
-                                    }
-                                }
-                            } catch (Exception e) {
-
-                            } finally {
-                                phaser.arriveAndDeregister(); // 任务完成
-                            }
-                        });
+                        logger.debug("tts start");
+                        CompletableFuture<byte[]> future = CompletableFuture.supplyAsync(() -> {
+                            return textToSpeechService.tts(text, voice);
+                        }, executorService);
+                        futures.add(future);
+                        logger.debug("tts end");
                     }
 
                     translateResult.put("translatedText", text);
