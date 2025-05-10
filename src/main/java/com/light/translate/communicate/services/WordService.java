@@ -3,17 +3,23 @@ package com.light.translate.communicate.services;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.light.translate.communicate.data.Translation;
 import com.light.translate.communicate.data.Word;
 import com.light.translate.communicate.repository.ExampleRepository;
 import com.light.translate.communicate.repository.TranslationRepository;
 import com.light.translate.communicate.repository.WordRepository;
+import com.light.translate.communicate.vo.WordDTO;
+import com.light.translate.communicate.vo.WordProjectionDTO;
 import com.light.translate.communicate.vo.WordsDetailDTO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -33,16 +39,55 @@ public class WordService {
         return wordRepository.findById(wordId);
     }
 
-    public Optional<Word> getWord(String word) {
+    public WordDTO getWord(String word) {
         if (wordRepository.findByHeadWord(word).isEmpty()) {
-            return Optional.empty();
+            return null;
         } else {
-            return wordRepository.findByHeadWord(word).stream().findFirst();
+            WordDTO wordDTO = new WordDTO();
+            Word wordOptional = wordRepository.findByHeadWord(word).stream().findFirst().get();
+            List<Translation> translation = this.translationRepository.findByWordId(wordOptional.getWordId());
+            wordDTO.setWordId(wordOptional.getWordId());
+            wordDTO.setHeadWord(wordOptional.getHeadWord());
+            wordDTO.setWordRank(wordOptional.getWordRank());
+            wordDTO.setUkPhone(wordOptional.getUkPhone());
+            wordDTO.setUsPhone(wordOptional.getUsPhone());
+            wordDTO.setTranslations(translation);
+            return wordDTO;
         }
     }
 
-    public List<Word> searchWords(String query) {
-        return wordRepository.findByHeadWordStartingWith(query);
+    public List<WordDTO> getRecommendWords(String word) throws IOException {
+        List<WordDTO> wordDTOList = new ArrayList<>();
+        if (wordRepository.findByHeadWord(word).isEmpty()) {
+            return wordDTOList;
+        } else {
+            Word wordOptional = wordRepository.findByHeadWord(word).stream().findFirst().get();
+            ObjectMapper mapper = new ObjectMapper();
+            List<WordsDetailDTO.Syno> synoData = parseSynoData(wordOptional.getSynoData(), mapper);
+            synoData.forEach(syno -> {
+                syno.getHwds().forEach(hwd -> {
+                    List<Word> byHeadWord = wordRepository.findByHeadWord(hwd.getW());
+                    if (!byHeadWord.isEmpty()) {
+                        Word word1 = byHeadWord.stream().findFirst().get();
+                        List<Translation> translation = this.translationRepository.findByWordId(word1.getWordId());
+                        WordDTO wordDTO = new WordDTO();
+                        wordDTO.setWordId(word1.getWordId());
+                        wordDTO.setHeadWord(word1.getHeadWord());
+                        wordDTO.setWordRank(word1.getWordRank());
+                        wordDTO.setUkPhone(word1.getUkPhone());
+                        wordDTO.setUsPhone(word1.getUsPhone());
+                        wordDTO.setTranslations(translation);
+                        wordDTOList.add(wordDTO);
+                    }
+                });
+            });
+            return wordDTOList;
+        }
+    }
+
+    public List<WordProjectionDTO> searchWords(String query) {
+        Pageable topTen = PageRequest.of(0, 6); // 第一页，每页10条
+        return wordRepository.findGroupedWordProjections(query, topTen).getContent();
     }
 
 

@@ -6,11 +6,14 @@ import com.light.translate.communicate.data.Word;
 import com.light.translate.communicate.services.ExampleService;
 import com.light.translate.communicate.services.TranslationService;
 import com.light.translate.communicate.services.WordService;
+import com.light.translate.communicate.vo.WordDTO;
+import com.light.translate.communicate.vo.WordProjectionDTO;
 import com.light.translate.communicate.vo.WordsDetailDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -32,14 +35,12 @@ public class DictController {
     }
 
     @GetMapping("/english/words")
-    public ResponseEntity<Word> getWord(@RequestParam("word") String word) {
-        return wordService.getWord(word)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<WordDTO> getWord(@RequestParam("word") String word) {
+        return ResponseEntity.ok(wordService.getWord(word));
     }
 
     @GetMapping("/english/words/search")
-    public List<Word> search(@RequestParam("word") String q) {
+    public List<WordProjectionDTO> search(@RequestParam("word") String q) {
         return wordService.searchWords(q);
     }
 
@@ -48,12 +49,6 @@ public class DictController {
         return ResponseEntity.ok(wordService.getWordDetail(wordId));
     }
 
-    @GetMapping("/english/words/detail")
-    public ResponseEntity<WordsDetailDTO> getWordDetail(@RequestParam("word") String word) {
-        Word w = wordService.getWord(word)
-                .orElseThrow(() -> new RuntimeException("Word not found"));
-        return ResponseEntity.ok(wordService.getWordDetail(w.getWordId()));
-    }
 
     @GetMapping("/english/examples/{wordId}")
     public List<Example> getExamples(@PathVariable String wordId) {
@@ -63,6 +58,11 @@ public class DictController {
     @GetMapping("/english/translations/{wordId}")
     public List<Translation> getTranslations(@PathVariable String wordId) {
         return translationService.getTranslationsByWordId(wordId);
+    }
+
+    @GetMapping("/english/words/recommendWords")
+    public List<WordDTO> getRecommendWords(@RequestParam("word") String word) throws IOException {
+        return wordService.getRecommendWords(word);
     }
 }
 
