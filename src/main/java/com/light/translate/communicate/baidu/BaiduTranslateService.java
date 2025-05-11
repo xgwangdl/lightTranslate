@@ -1,7 +1,7 @@
 package com.light.translate.communicate.baidu;
 
 import com.light.translate.communicate.utils.MD5;
-import com.light.translate.communicate.vo.BaiduTranslateVO;
+import com.light.translate.communicate.dto.BaiduTranslateDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -17,8 +17,8 @@ public class BaiduTranslateService {
     @Value("${spring.ai.baidu.api-key}")
     private String securityKey;
 
-    public BaiduTranslateVO translate(String query, String from, String to) {
-        BaiduTranslateVO baiduTranslateVO = BaiduTranslateClient.postTranslate(this.buildParams(query, from, to));
+    public BaiduTranslateDTO translate(String query, String from, String to) {
+        BaiduTranslateDTO baiduTranslateVO = BaiduTranslateClient.postTranslate(this.buildParams(query, from, to));
         return baiduTranslateVO;
     }
 

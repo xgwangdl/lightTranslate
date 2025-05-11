@@ -1,6 +1,6 @@
-package com.light.translate.communicate.vo;
+package com.light.translate.communicate.dto;
 
-public class TranslateVO {
+public class TranslateDTO {
     String audioData;
     String audioUrl;
     String originText;

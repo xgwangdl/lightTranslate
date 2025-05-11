@@ -1,4 +1,4 @@
-package com.light.translate.communicate.vo;
+package com.light.translate.communicate.dto;
 
 import com.light.translate.communicate.data.Translation;
 
@@ -10,6 +10,7 @@ public class WordDTO {
     private String headWord;
     private String usPhone;
     private String ukPhone;
+    private String bookname;
 
     private List<Translation> translations;
 
@@ -59,5 +60,13 @@ public class WordDTO {
 
     public void setTranslations(List<Translation> translations) {
         this.translations = translations;
+    }
+
+    public String getBookname() {
+        return bookname;
+    }
+
+    public void setBookname(String bookname) {
+        this.bookname = bookname;
     }
 }

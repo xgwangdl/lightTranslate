@@ -1,4 +1,4 @@
-package com.light.translate.communicate.vo;
+package com.light.translate.communicate.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.light.translate.communicate.data.Example;

@@ -1,15 +1,15 @@
 package com.light.translate.communicate.controller;
 
-import com.light.translate.communicate.data.Example;
-import com.light.translate.communicate.data.Translation;
-import com.light.translate.communicate.data.Word;
+import com.light.translate.communicate.data.*;
+import com.light.translate.communicate.services.WordBookService;
 import com.light.translate.communicate.services.ExampleService;
 import com.light.translate.communicate.services.TranslationService;
 import com.light.translate.communicate.services.WordService;
-import com.light.translate.communicate.vo.WordDTO;
-import com.light.translate.communicate.vo.WordProjectionDTO;
-import com.light.translate.communicate.vo.WordsDetailDTO;
+import com.light.translate.communicate.dto.WordDTO;
+import com.light.translate.communicate.dto.WordsDetailDTO;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +26,8 @@ public class DictController {
     private ExampleService exampleService;
     @Autowired
     private TranslationService translationService;
+    @Autowired
+    private WordBookService bookListService;
 
     @GetMapping("/english/words/{wordId}")
     public ResponseEntity<Word> getWordById(@PathVariable String wordId) {
@@ -40,7 +42,7 @@ public class DictController {
     }
 
     @GetMapping("/english/words/search")
-    public List<WordProjectionDTO> search(@RequestParam("word") String q) {
+    public List<WordTranslationView> search(@RequestParam("word") String q) {
         return wordService.searchWords(q);
     }
 
@@ -64,5 +66,17 @@ public class DictController {
     public List<WordDTO> getRecommendWords(@RequestParam("word") String word) throws IOException {
         return wordService.getRecommendWords(word);
     }
+
+    @GetMapping("/english/books")
+    public Page<WordBook> list(@RequestParam(defaultValue = "0") int page,
+                               @RequestParam(defaultValue = "10") int size) {
+        return bookListService.getAllBooks(PageRequest.of(page, size));
+    }
+
+    @GetMapping("/english/books/{id}")
+    public WordBook getById(@PathVariable String id) {
+        return bookListService.getBookById(id);
+    }
+
 }
 

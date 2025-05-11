@@ -1,8 +1,8 @@
-package com.light.translate.communicate.vo;
+package com.light.translate.communicate.dto;
 
 import java.util.List;
 
-public class BaiduTranslateVO {
+public class BaiduTranslateDTO {
     private String from;
     private String to;
     private List<TranslationResult> trans_result;

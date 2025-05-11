@@ -6,8 +6,8 @@ import com.light.translate.communicate.services.DictService;
 import com.light.translate.communicate.translate.AudioConverter;
 import com.light.translate.communicate.translate.TranslateSpeechService;
 import com.light.translate.communicate.utils.OssUtil;
-import com.light.translate.communicate.vo.BaiduTranslateVO;
-import com.light.translate.communicate.vo.TranslateVO;
+import com.light.translate.communicate.dto.BaiduTranslateDTO;
+import com.light.translate.communicate.dto.TranslateDTO;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +42,7 @@ public class TranslationController {
 
 
     @PostMapping("/translate")
-    public ResponseEntity<TranslateVO> translateAudio(
+    public ResponseEntity<TranslateDTO> translateAudio(
             @RequestParam("audio") MultipartFile audioFile,
             @RequestParam("sourceLanguage") String sourceLanguage,
             @RequestParam("targetLanguage") String targetLanguage,
@@ -66,7 +66,7 @@ public class TranslationController {
         String url = ossUtil.upload(is, "audio.mp3");
         log.debug("process4");
 
-        TranslateVO translateVO = new TranslateVO();
+        TranslateDTO translateVO = new TranslateDTO();
         //translateVO.setAudioData(base64Audio);
         translateVO.setAudioUrl(url);
         translateVO.setOriginText((String)translateResult.get("orignText"));
@@ -84,7 +84,7 @@ public class TranslationController {
             @RequestParam("sourceLanguage") String sourceLanguage,
             @RequestParam("targetLanguage") String targetLanguage)  {
 
-        BaiduTranslateVO translate = this.baiduTranslateService.translate(text, sourceLanguage, targetLanguage);
+        BaiduTranslateDTO translate = this.baiduTranslateService.translate(text, sourceLanguage, targetLanguage);
         if (translate != null && translate.getError_code() == null) {
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_JSON)

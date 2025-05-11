@@ -5,12 +5,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.light.translate.communicate.data.Translation;
 import com.light.translate.communicate.data.Word;
+import com.light.translate.communicate.data.WordBook;
+import com.light.translate.communicate.data.WordTranslationView;
 import com.light.translate.communicate.repository.ExampleRepository;
 import com.light.translate.communicate.repository.TranslationRepository;
 import com.light.translate.communicate.repository.WordRepository;
-import com.light.translate.communicate.vo.WordDTO;
-import com.light.translate.communicate.vo.WordProjectionDTO;
-import com.light.translate.communicate.vo.WordsDetailDTO;
+import com.light.translate.communicate.dto.WordDTO;
+import com.light.translate.communicate.dto.WordProjectionDTO;
+import com.light.translate.communicate.dto.WordsDetailDTO;
+import com.light.translate.communicate.repository.WordTranslationViewRepository;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
@@ -34,6 +37,10 @@ public class WordService {
 
     @Autowired
     private ExampleRepository exampleRepository;
+    @Autowired
+    private WordTranslationViewRepository wordTranslationViewRepository;
+    @Autowired
+    private WordBookService  wordBookService;
 
     public Optional<Word> getWordById(String wordId) {
         return wordRepository.findById(wordId);
@@ -45,6 +52,7 @@ public class WordService {
         } else {
             WordDTO wordDTO = new WordDTO();
             Word wordOptional = wordRepository.findByHeadWord(word).stream().findFirst().get();
+            WordBook wordBook = this.wordBookService.getBookById(wordOptional.getBookId());
             List<Translation> translation = this.translationRepository.findByWordId(wordOptional.getWordId());
             wordDTO.setWordId(wordOptional.getWordId());
             wordDTO.setHeadWord(wordOptional.getHeadWord());
@@ -52,6 +60,9 @@ public class WordService {
             wordDTO.setUkPhone(wordOptional.getUkPhone());
             wordDTO.setUsPhone(wordOptional.getUsPhone());
             wordDTO.setTranslations(translation);
+            if (wordBook != null) {
+                wordDTO.setBookname(wordBook.getBookName());
+            }
             return wordDTO;
         }
     }
@@ -69,6 +80,7 @@ public class WordService {
                     List<Word> byHeadWord = wordRepository.findByHeadWord(hwd.getW());
                     if (!byHeadWord.isEmpty()) {
                         Word word1 = byHeadWord.stream().findFirst().get();
+                        WordBook wordBook = this.wordBookService.getBookById(word1.getBookId());
                         List<Translation> translation = this.translationRepository.findByWordId(word1.getWordId());
                         WordDTO wordDTO = new WordDTO();
                         wordDTO.setWordId(word1.getWordId());
@@ -77,6 +89,9 @@ public class WordService {
                         wordDTO.setUkPhone(word1.getUkPhone());
                         wordDTO.setUsPhone(word1.getUsPhone());
                         wordDTO.setTranslations(translation);
+                        if (wordBook != null) {
+                            wordDTO.setBookname(wordBook.getBookName());
+                        }
                         wordDTOList.add(wordDTO);
                     }
                 });
@@ -85,9 +100,14 @@ public class WordService {
         }
     }
 
-    public List<WordProjectionDTO> searchWords(String query) {
-        Pageable topTen = PageRequest.of(0, 6); // 第一页，每页10条
-        return wordRepository.findGroupedWordProjections(query, topTen).getContent();
+    public List<WordTranslationView> searchWords(String query) {
+        Pageable topTen = PageRequest.of(0, 8);
+        List<WordTranslationView> content = wordTranslationViewRepository.findByHeadWordStartingWith(query, topTen).getContent();
+        if (content.isEmpty()) {
+            return wordTranslationViewRepository.findByTranCnStartingWith(query, topTen).getContent();
+        } else {
+            return content;
+        }
     }
 
 

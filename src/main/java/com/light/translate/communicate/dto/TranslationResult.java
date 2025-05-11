@@ -1,4 +1,4 @@
-package com.light.translate.communicate.vo;
+package com.light.translate.communicate.dto;
 
 public class TranslationResult {
     private String src;
