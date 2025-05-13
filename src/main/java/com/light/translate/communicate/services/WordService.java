@@ -22,10 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 public class WordService {
@@ -69,6 +66,13 @@ public class WordService {
 
     public List<WordDTO> getRecommendWords(String word) throws IOException {
         List<WordDTO> wordDTOList = new ArrayList<>();
+        if (!StringUtils.hasText(word)) {
+            long count = wordRepository.countAllWords();
+            if (count == 0) return null;
+            int index = new Random().nextInt((int) count);
+            word = wordRepository.findWordByOffset(index).getHeadWord();
+        }
+
         if (wordRepository.findByHeadWord(word).isEmpty()) {
             return wordDTOList;
         } else {
