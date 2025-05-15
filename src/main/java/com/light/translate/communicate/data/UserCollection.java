@@ -29,5 +29,5 @@ public class UserCollection {
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "word_id", referencedColumnName = "wordId", insertable = false, updatable = false)
-    private WordTranslationView word;
+    private WordTranslationAllView word;
 }

@@ -104,6 +104,14 @@ public class WordService {
         }
     }
 
+    public WordsDetailDTO getStudyWord(String bookId) throws IOException {
+        long count = wordRepository.countAllWordsByBook(bookId);
+        if (count == 0) return null;
+        int index = new Random().nextInt((int) count);
+        String wordId = wordRepository.findWordByOffsetByBook(bookId,  index).getWordId();
+        return this.getWordDetail(wordId);
+    }
+
     public List<WordTranslationView> searchWords(String query) {
         Pageable topTen = PageRequest.of(0, 8);
         List<WordTranslationView> content = wordTranslationViewRepository.findByHeadWordStartingWith(query, topTen).getContent();
@@ -133,7 +141,8 @@ public class WordService {
             dto.setRelWordData(parseRelWordData(word.getRelWordData(), mapper));
             dto.setSentenceData(parseSentenceData(word.getSentenceData(), mapper));
             dto.setTransData(parseList(word.getTransData(), new TypeReference<List<WordsDetailDTO.Trans>>() {}, mapper));
-        } catch (IOException e) {
+        } catch (Exception e) {
+            System.out.println("wordId:" + wordId);
             throw new RuntimeException("JSON parse error", e);
         }
 

@@ -7,6 +7,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class WordBookService {
@@ -14,8 +16,8 @@ public class WordBookService {
     private final WordBookRepository repository;
 
 
-    public Page<WordBook> getAllBooks(Pageable pageable) {
-        return repository.findAll(pageable);
+    public List<WordBook> getAllBooks() {
+        return repository.findAll();
     }
 
 

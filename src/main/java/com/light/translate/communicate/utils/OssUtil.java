@@ -51,5 +51,12 @@ public class OssUtil {
             ossClient.shutdown();
         }
     }
+
+    public String getUrl(String key) {
+        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+        Date expiration = new Date(System.currentTimeMillis() +  1 * 60 * 60 * 1000);
+        URL signedUrl = ossClient.generatePresignedUrl(bucketName, key, expiration);
+        return signedUrl.toString();
+    }
 }
 

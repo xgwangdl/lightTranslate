@@ -3,9 +3,11 @@ package com.light.translate.communicate.controller;
 import com.alibaba.nacos.api.model.v2.Result;
 import com.light.translate.communicate.data.*;
 import com.light.translate.communicate.dto.UserWordCollectDTO;
+import com.light.translate.communicate.dto.WordBookDTO;
 import com.light.translate.communicate.services.*;
 import com.light.translate.communicate.dto.WordDTO;
 import com.light.translate.communicate.dto.WordsDetailDTO;
+import com.light.translate.communicate.utils.OssUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,6 +21,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/dict")
@@ -34,6 +37,8 @@ public class DictController {
     private WordBookService bookListService;
     @Autowired
     private UserWordCollectService service;
+    @Autowired
+    private OssUtil ossUtil;
 
     @GetMapping("/english/words/{wordId}")
     public ResponseEntity<Word> getWordById(@PathVariable String wordId) {
@@ -72,16 +77,39 @@ public class DictController {
     public List<WordDTO> getRecommendWords(@RequestParam("word") String word) throws IOException {
         return wordService.getRecommendWords(word);
     }
+    @GetMapping("/english/words/study/{bookId}")
+    public ResponseEntity<WordsDetailDTO> getStudyWord(@PathVariable String bookId) throws IOException {
+        return ResponseEntity.ok(wordService.getStudyWord(bookId));
+    }
 
     @GetMapping("/english/books")
-    public Page<WordBook> list(@RequestParam(defaultValue = "0") int page,
-                               @RequestParam(defaultValue = "10") int size) {
-        return bookListService.getAllBooks(PageRequest.of(page, size));
+    public List<WordBookDTO> list() {
+        List<WordBook> books =  bookListService.getAllBooks();
+        return books.stream().map(book -> {
+            WordBookDTO dto = new WordBookDTO();
+            dto.setBookId(book.getBookId());
+            dto.setBookName(book.getBookName());
+            dto.setWordCount(book.getWordCount());
+
+            // 拼接 OSS 图片 URL
+            String iconUrl = ossUtil.getUrl("book-png/" + book.getBookId() + ".png") ;
+            dto.setIcon(iconUrl);
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     @GetMapping("/english/books/{id}")
-    public WordBook getById(@PathVariable String id) {
-        return bookListService.getBookById(id);
+    public WordBookDTO getById(@PathVariable String id) {
+        WordBook book = bookListService.getBookById(id);
+        WordBookDTO dto = new WordBookDTO();
+        dto.setBookId(book.getBookId());
+        dto.setBookName(book.getBookName());
+        dto.setWordCount(book.getWordCount());
+
+        // 拼接 OSS 图片 URL
+        String iconUrl = ossUtil.getUrl("book-png/" + book.getBookId() + ".png") ;
+        dto.setIcon(iconUrl);
+        return dto;
     }
 
     @GetMapping("/english/collect/check")

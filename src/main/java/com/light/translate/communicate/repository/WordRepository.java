@@ -18,4 +18,11 @@ public interface WordRepository extends JpaRepository<Word, String> {
 
     @Query(value = "SELECT * FROM words LIMIT 1 OFFSET :offset", nativeQuery = true)
     Word findWordByOffset(@Param("offset") int offset);
+
+    @Query("SELECT COUNT(w) FROM Word w WHERE w.bookId = :bookId")
+    long countAllWordsByBook(@Param("bookId") String bookI);
+
+    @Query(value = "SELECT * FROM words WHERE book_id = :bookId LIMIT 1 OFFSET :offset", nativeQuery = true)
+    Word findWordByOffsetByBook(@Param("bookId") String bookId, @Param("offset") int offset);
+
 }

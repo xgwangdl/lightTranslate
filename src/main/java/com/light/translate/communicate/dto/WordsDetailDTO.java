@@ -1,5 +1,6 @@
 package com.light.translate.communicate.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.light.translate.communicate.data.Example;
 import com.light.translate.communicate.data.Translation;
@@ -46,6 +47,7 @@ public class WordsDetailDTO {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Phrase {
         @JsonProperty("pContent")
         private String pContent;
@@ -54,6 +56,7 @@ public class WordsDetailDTO {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Syno {
         private String pos;
         private String tran;
@@ -66,6 +69,7 @@ public class WordsDetailDTO {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class RelWord {
         private String pos;
         private List<Rel> words;
@@ -78,6 +82,7 @@ public class WordsDetailDTO {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Sentence {
         @JsonProperty("sContent")
         private String sContent;
@@ -86,6 +91,7 @@ public class WordsDetailDTO {
     }
 
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Trans {
         private String pos;
         @JsonProperty("descCn")
