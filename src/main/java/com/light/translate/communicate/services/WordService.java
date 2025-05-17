@@ -79,6 +79,7 @@ public class WordService {
             Word wordOptional = wordRepository.findByHeadWord(word).stream().findFirst().get();
             ObjectMapper mapper = new ObjectMapper();
             List<WordsDetailDTO.Syno> synoData = parseSynoData(wordOptional.getSynoData(), mapper);
+            if (synoData == null) return wordDTOList;
             synoData.forEach(syno -> {
                 syno.getHwds().forEach(hwd -> {
                     List<Word> byHeadWord = wordRepository.findByHeadWord(hwd.getW());

@@ -2,11 +2,8 @@ package com.light.translate.communicate.controller;
 
 import com.alibaba.nacos.api.model.v2.Result;
 import com.light.translate.communicate.data.*;
-import com.light.translate.communicate.dto.UserWordCollectDTO;
-import com.light.translate.communicate.dto.WordBookDTO;
+import com.light.translate.communicate.dto.*;
 import com.light.translate.communicate.services.*;
-import com.light.translate.communicate.dto.WordDTO;
-import com.light.translate.communicate.dto.WordsDetailDTO;
 import com.light.translate.communicate.utils.OssUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -130,18 +127,16 @@ public class DictController {
     }
 
     @GetMapping("/english/collect/list")
-    public Page<UserWordCollectDTO> listCollect(@RequestParam String openid,
-                                            @RequestParam(required = false) String category,
-                                            @RequestParam(defaultValue = "0") int page,
-                                            @RequestParam(defaultValue = "10") int size) {
+    public Page<UserCollectionDTO> listCollect(@RequestParam String openid,
+                                               @RequestParam(required = false) String category,
+                                               @RequestParam(defaultValue = "0") int page,
+                                               @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createTime"));
-        Page<UserCollection> pageResult;
         if (StringUtils.hasText(category)) {
-            pageResult = service.listCollects(openid, category, pageable);
+            return service.listCollects(openid, category, pageable);
         } else {
-            pageResult = service.listCollects(openid, pageable);
+            return service.listCollects(openid, pageable);
         }
-        return pageResult.map(UserWordCollectDTO::new);
     }
 }
 

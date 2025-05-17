@@ -5,6 +5,8 @@ import com.jayway.jsonpath.JsonPath;
 import com.light.translate.communicate.data.User;
 import com.light.translate.communicate.repository.UserRepository;
 import lombok.Data;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/dict/auth")
 public class AuthController {
+    private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
     @Value("${spring.ai.wechat.app-id}")
     private String appId;

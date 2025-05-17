@@ -1,6 +1,7 @@
 package com.light.translate.communicate.services;
 
 import com.light.translate.communicate.data.UserCollection;
+import com.light.translate.communicate.dto.UserCollectionDTO;
 import com.light.translate.communicate.repository.UserCollectRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -34,10 +35,10 @@ public class UserWordCollectService {
         repository.delete(userCollection);
     }
 
-    public Page<UserCollection> listCollects(String openid, Pageable pageable) {
+    public Page<UserCollectionDTO> listCollects(String openid, Pageable pageable) {
         return repository.findAllByOpenid(openid,pageable);
     }
-    public Page<UserCollection> listCollects(String openid, String category, Pageable pageable) {
+    public Page<UserCollectionDTO> listCollects(String openid, String category, Pageable pageable) {
         return repository.findByOpenidAndCategory(openid,category,pageable);
     }
 }
