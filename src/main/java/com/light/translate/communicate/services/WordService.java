@@ -23,6 +23,7 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class WordService {
@@ -73,36 +74,39 @@ public class WordService {
             word = wordRepository.findWordByOffset(index).getHeadWord();
         }
 
-        if (wordRepository.findByHeadWord(word).isEmpty()) {
-            return wordDTOList;
-        } else {
-            Word wordOptional = wordRepository.findByHeadWord(word).stream().findFirst().get();
+        List<Word> words = wordRepository.findByHeadWord(word);
+        if (words != null && !words.isEmpty()) {
+            Word wordOptional = words.get(0);
             ObjectMapper mapper = new ObjectMapper();
             List<WordsDetailDTO.Syno> synoData = parseSynoData(wordOptional.getSynoData(), mapper);
-            if (synoData == null) return wordDTOList;
-            synoData.forEach(syno -> {
-                syno.getHwds().forEach(hwd -> {
-                    List<Word> byHeadWord = wordRepository.findByHeadWord(hwd.getW());
-                    if (!byHeadWord.isEmpty()) {
-                        Word word1 = byHeadWord.stream().findFirst().get();
-                        WordBook wordBook = this.wordBookService.getBookById(word1.getBookId());
-                        List<Translation> translation = this.translationRepository.findByWordId(word1.getWordId());
-                        WordDTO wordDTO = new WordDTO();
-                        wordDTO.setWordId(word1.getWordId());
-                        wordDTO.setHeadWord(word1.getHeadWord());
-                        wordDTO.setWordRank(word1.getWordRank());
-                        wordDTO.setUkPhone(word1.getUkPhone());
-                        wordDTO.setUsPhone(word1.getUsPhone());
-                        wordDTO.setTranslations(translation);
-                        if (wordBook != null) {
-                            wordDTO.setBookname(wordBook.getBookName());
+            if (synoData != null) {
+                synoData.forEach(syno -> {
+                    syno.getHwds().forEach(hwd -> {
+                        List<Word> byHeadWord = wordRepository.findByHeadWord(hwd.getW());
+                        if (!byHeadWord.isEmpty()) {
+                            Word word1 = byHeadWord.stream().findFirst().get();
+                            WordBook wordBook = this.wordBookService.getBookById(word1.getBookId());
+                            List<Translation> translation = this.translationRepository.findByWordId(word1.getWordId());
+                            WordDTO wordDTO = new WordDTO();
+                            wordDTO.setWordId(word1.getWordId());
+                            wordDTO.setHeadWord(word1.getHeadWord());
+                            wordDTO.setWordRank(word1.getWordRank());
+                            wordDTO.setUkPhone(word1.getUkPhone());
+                            wordDTO.setUsPhone(word1.getUsPhone());
+                            wordDTO.setTranslations(translation);
+                            if (wordBook != null) {
+                                wordDTO.setBookname(wordBook.getBookName());
+                            }
+                            wordDTOList.add(wordDTO);
                         }
-                        wordDTOList.add(wordDTO);
-                    }
+                    });
                 });
-            });
-            return wordDTOList;
+            }
         }
+        if (wordDTOList.isEmpty()) {
+            wordDTOList.addAll(getRecommendWords(""));
+        }
+        return wordDTOList;
     }
 
     public WordsDetailDTO getStudyWord(String bookId) throws IOException {
@@ -117,7 +121,7 @@ public class WordService {
         Pageable topTen = PageRequest.of(0, 8);
         List<WordTranslationView> content = wordTranslationViewRepository.findByHeadWordStartingWith(query, topTen).getContent();
         if (content.isEmpty()) {
-            return wordTranslationViewRepository.findByTranCnStartingWith(query, topTen).getContent();
+            return wordTranslationViewRepository.findByTranCnContaining(query, topTen).getContent();
         } else {
             return content;
         }
@@ -178,5 +182,45 @@ public class WordService {
         return mapper.convertValue(root, new TypeReference<List<WordsDetailDTO.Sentence>>() {});
     }
 
+    public List<String> getDistractorMeanings(String wordId, int count) {
+        WordsDetailDTO wordDetail = this.getWordDetail(wordId);
+        List<String> distractors = new ArrayList<>();
+        List<String> trans = new ArrayList<>();
+        wordDetail.getTransData().forEach(transData -> {
+            trans.add(transData.getTranCn());
+        });
+
+        List<WordsDetailDTO.Syno> synoDatas = wordDetail.getSynoData();
+        if (synoDatas != null && synoDatas.size() > 0) {
+            for (WordsDetailDTO.Syno synoData : synoDatas) {
+                if (synoData.getHwds() != null && synoData.getHwds().size() > 0) {
+                    WordsDetailDTO.Hwd hwd = synoData.getHwds().get(0);
+                    WordDTO word = this.getWord(hwd.getW());
+                    if (word != null && word.getTranslations() != null && word.getTranslations().size() > 0) {
+                        if (!trans.contains(word.getTranslations().get(0).getTranCn())) {
+                            distractors.add(word.getTranslations().get(0).getTranCn());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        List<Word> words = wordRepository.findRandomWordsExclude(wordDetail.getHeadWord(), count * 2); // 多查些避免无释义
+
+        for (Word word : words) {
+            List<Translation> translation = this.translationRepository.findByWordId(word.getWordId());
+            if (!translation.isEmpty()) {
+                Translation tran = translation.get(0);
+                if (tran.getTranCn() != null && !tran.getTranCn().isEmpty() && !distractors.contains(tran.getTranCn())) {
+                    distractors.add(tran.getTranCn());
+                }
+            }
+
+            if (distractors.size() >= count) break;
+        }
+
+        return distractors;
+    }
 }
 

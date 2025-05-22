@@ -8,6 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface WordTranslationViewRepository extends JpaRepository<WordTranslationView, Long> {
 
     Page<WordTranslationView> findByHeadWordStartingWith(String prefix, Pageable pageable);
-    Page<WordTranslationView> findByTranCnStartingWith(String prefix, Pageable pageable);
+    Page<WordTranslationView> findByTranCnContaining(String prefix, Pageable pageable);
 }
 

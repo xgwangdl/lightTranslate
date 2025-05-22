@@ -35,6 +35,8 @@ public class DictController {
     @Autowired
     private UserWordCollectService service;
     @Autowired
+    private ReviewService reviewService;
+    @Autowired
     private OssUtil ossUtil;
 
     @GetMapping("/english/words/{wordId}")
@@ -137,6 +139,39 @@ public class DictController {
         } else {
             return service.listCollects(openid, pageable);
         }
+    }
+
+    @PostMapping("/english/words/review/submit")
+    public UserWordReview reviewWord(
+            @RequestParam String openid,
+            @RequestParam String wordId,
+            @RequestParam String bookId,
+            @RequestParam int quality
+    ) {
+        return reviewService.reviewWord(openid, wordId, bookId, quality);
+    }
+
+    @GetMapping("/english/words/review/today")
+    public List<UserWordReview> getTodayReviewList(@RequestParam String openid,@RequestParam String bookId) {
+        return reviewService.getTodayReviewList(openid,bookId);
+    }
+
+    @PostMapping("/english/words/review/learn")
+    public UserWordReview learnNewWord(
+            @RequestParam String openid,
+            @RequestParam String wordId,
+            @RequestParam String bookId
+    ) {
+        return reviewService.learnNewWord(openid, wordId, bookId);
+    }
+
+    @GetMapping("/english/words/review/distractors")
+    public ResponseEntity<List<String>> getDistractors(
+            @RequestParam String wordId,
+            @RequestParam(defaultValue = "3") int count
+    ) {
+        List<String> result = wordService.getDistractorMeanings(wordId, count);
+        return ResponseEntity.ok(result);
     }
 }
 
