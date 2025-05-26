@@ -42,7 +42,7 @@ public class ReviewService {
         review.setLastReviewTime(now);
 
         if (quality < 3) {
-            review.setNextReviewDate(LocalDate.now().plusDays(1));
+            review.setNextReviewDate(LocalDate.now().plusDays(0));
         } else {
             int interval;
             if (review.getReviewTimes() == 1) interval = 1;

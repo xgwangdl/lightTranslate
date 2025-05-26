@@ -7,7 +7,7 @@ import org.springframework.data.annotation.Immutable;
 
 @Entity
 @Immutable  // 表示只读
-@Table(name = "view_word_translation")
+@Table(name = "word_translation_view_cache")
 public class WordTranslationView {
 
     @Id

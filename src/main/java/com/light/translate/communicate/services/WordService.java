@@ -23,6 +23,7 @@ import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 @Service
@@ -183,10 +184,12 @@ public class WordService {
     }
 
     public List<String> getDistractorMeanings(String wordId, int count) {
+        AtomicReference<String> pos = new AtomicReference<>();
         WordsDetailDTO wordDetail = this.getWordDetail(wordId);
         List<String> distractors = new ArrayList<>();
         List<String> trans = new ArrayList<>();
         wordDetail.getTransData().forEach(transData -> {
+            pos.set(transData.getPos());
             trans.add(transData.getTranCn());
         });
 
@@ -194,7 +197,8 @@ public class WordService {
         if (synoDatas != null && synoDatas.size() > 0) {
             for (WordsDetailDTO.Syno synoData : synoDatas) {
                 if (synoData.getHwds() != null && synoData.getHwds().size() > 0) {
-                    WordsDetailDTO.Hwd hwd = synoData.getHwds().get(0);
+                    Random random = new Random();
+                    WordsDetailDTO.Hwd hwd = synoData.getHwds().get(random.nextInt(synoData.getHwds().size()));
                     WordDTO word = this.getWord(hwd.getW());
                     if (word != null && word.getTranslations() != null && word.getTranslations().size() > 0) {
                         if (!trans.contains(word.getTranslations().get(0).getTranCn())) {
@@ -206,9 +210,9 @@ public class WordService {
             }
         }
 
-        List<Word> words = wordRepository.findRandomWordsExclude(wordDetail.getHeadWord(), count * 2); // 多查些避免无释义
+        List<WordTranslationView> words = wordTranslationViewRepository.findRandomWordsExclude(wordDetail.getHeadWord(), pos.get(), count); // 多查些避免无释义
 
-        for (Word word : words) {
+        for (WordTranslationView word : words) {
             List<Translation> translation = this.translationRepository.findByWordId(word.getWordId());
             if (!translation.isEmpty()) {
                 Translation tran = translation.get(0);
