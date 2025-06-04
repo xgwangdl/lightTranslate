@@ -119,10 +119,10 @@ public class WordService {
     }
 
     public List<WordTranslationView> searchWords(String query) {
-        Pageable topTen = PageRequest.of(0, 8);
+        Pageable topTen = PageRequest.of(0, 10);
         List<WordTranslationView> content = wordTranslationViewRepository.findByHeadWordStartingWith(query, topTen).getContent();
         if (content.isEmpty()) {
-            return wordTranslationViewRepository.findByTranCnContaining(query, topTen).getContent();
+            return wordTranslationViewRepository.findUnionLike(query, topTen).getContent();
         } else {
             return content;
         }

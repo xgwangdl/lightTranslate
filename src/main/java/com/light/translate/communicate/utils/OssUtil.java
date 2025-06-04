@@ -39,8 +39,8 @@ public class OssUtil {
 
             ossClient.putObject(bucketName, objectName, inputStream);
 
-            // 设置 URL 有效期为 7 天（单位：毫秒）
-            Date expiration = new Date(System.currentTimeMillis() + 7L * 24 * 60 * 60 * 1000);
+            // 设置 URL 有效期为 30 天（单位：毫秒）
+            Date expiration = new Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000);
             URL signedUrl = ossClient.generatePresignedUrl(bucketName, objectName, expiration);
 
             return signedUrl.toString();

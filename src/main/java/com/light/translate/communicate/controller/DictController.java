@@ -1,5 +1,7 @@
 package com.light.translate.communicate.controller;
 
+import com.alibaba.dashscope.exception.InputRequiredException;
+import com.alibaba.dashscope.exception.NoApiKeyException;
 import com.alibaba.nacos.api.model.v2.Result;
 import com.light.translate.communicate.data.*;
 import com.light.translate.communicate.dto.*;
@@ -38,6 +40,10 @@ public class DictController {
     private ReviewService reviewService;
     @Autowired
     private OssUtil ossUtil;
+    @Autowired
+    private QuestionService questionService;
+    @Autowired
+    private WrongQuestionService wrongQuestionService;
 
     @GetMapping("/english/words/{wordId}")
     public ResponseEntity<Word> getWordById(@PathVariable String wordId) {
@@ -172,6 +178,52 @@ public class DictController {
     ) {
         List<String> result = wordService.getDistractorMeanings(wordId, count);
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/english/words/question/test")
+    public QuestionDTO testWord(
+            @RequestParam String bookId
+    ) throws IOException {
+        WordsDetailDTO studyWord = wordService.getStudyWord(bookId);
+        WordBook book = bookListService.getBookById(bookId);
+        return this.questionService.ask(studyWord.getHeadWord(), book.getBookName());
+    }
+    // 1. 记录错题
+    @PostMapping("/english/words/wrong-questions")
+    public ResponseEntity<WrongQuestion> create(@RequestBody WrongQuestion question) {
+        return ResponseEntity.ok(wrongQuestionService.save(question));
+    }
+
+    // 2. 获取某用户的所有错题（可加 bookId 筛选）
+    @GetMapping("/english/words/wrong-questions")
+    public List<WrongQuestion> list(@RequestParam String openid) {
+        return wrongQuestionService.findByOpenid(openid);
+    }
+
+    // 3. 标记为已掌握
+    @PutMapping("/english/words/wrong-questions/{id}/master")
+    public String markAsMastered(@PathVariable Integer id) {
+        boolean result = wrongQuestionService.markAsMastered(id);
+        return result ? "Marked as mastered" : "Not found";
+    }
+
+    // 4. 删除错题
+    @DeleteMapping("/english/words/wrong-questions/{id}")
+    public String delete(@PathVariable Integer id) {
+        wrongQuestionService.deleteById(id);
+        return "Deleted";
+    }
+
+    // 5. 查看错题详情
+    @GetMapping("/english/words/wrong-questions/{id}")
+    public WrongQuestion getDetail(@PathVariable Integer id) {
+        return wrongQuestionService.findById(id).orElse(null);
+    }
+
+    @GetMapping("/english/words/wrong-questions/count")
+    public ResponseEntity<Long> countByOpenid(@RequestParam String openid) {
+        long count = wrongQuestionService.countByOpenid(openid);
+        return ResponseEntity.ok(count);
     }
 }
 
