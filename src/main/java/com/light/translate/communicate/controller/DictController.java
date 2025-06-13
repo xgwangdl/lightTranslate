@@ -196,8 +196,13 @@ public class DictController {
 
     // 2. 获取某用户的所有错题（可加 bookId 筛选）
     @GetMapping("/english/words/wrong-questions")
-    public List<WrongQuestion> list(@RequestParam String openid) {
-        return wrongQuestionService.findByOpenid(openid);
+    public List<WrongQuestionDTO> list(@RequestParam String openid,@RequestParam(required = false) String bookId,@RequestParam(required = false) String filter) {
+        Boolean isMastered = null;
+        if (!"null".equals(filter)) {
+            isMastered = filter.equals("0")?false:true;
+        }
+        bookId = "null".equals(bookId)  ? null : bookId;
+        return wrongQuestionService.findByOpenid(openid,bookId,isMastered);
     }
 
     // 3. 标记为已掌握
@@ -224,6 +229,12 @@ public class DictController {
     public ResponseEntity<Long> countByOpenid(@RequestParam String openid) {
         long count = wrongQuestionService.countByOpenid(openid);
         return ResponseEntity.ok(count);
+    }
+
+    @GetMapping("/english/words/wrong-questions/books")
+    public ResponseEntity<List<WordBook>> listUserWrongBooks(@RequestParam String openid) {
+        List<WordBook> books = wrongQuestionService.findUserWrongBooks(openid);
+        return ResponseEntity.ok(books);
     }
 }
 
