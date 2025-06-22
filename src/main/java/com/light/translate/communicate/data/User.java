@@ -29,6 +29,9 @@ public class User {
 
     private Integer gender = 0;
 
+    @Column(name = "book_id", length = 100)
+    private String bookId;
+
     @Column(updatable = false)
     @CreationTimestamp
     private LocalDateTime createTime;

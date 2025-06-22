@@ -12,4 +12,6 @@ public interface UserWordReviewRepository extends JpaRepository<UserWordReview, 
     Optional<UserWordReview> findByOpenidAndWordIdAndBookId(String openid, String wordId,  String bookId);
 
     List<UserWordReview> findByOpenidAndBookIdAndNextReviewDateLessThanEqual(String openid,  String bookId, LocalDate today);
+
+    List<UserWordReview> findByOpenidAndBookId(String openid, String bookId);
 }

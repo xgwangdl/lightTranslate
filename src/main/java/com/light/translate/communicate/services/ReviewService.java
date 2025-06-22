@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class ReviewService {
@@ -58,7 +59,8 @@ public class ReviewService {
     }
 
     public List<UserWordReview> getTodayReviewList(String openid, String bookId) {
-        return repository.findByOpenidAndBookIdAndNextReviewDateLessThanEqual(openid, bookId, LocalDate.now());
+        return repository.findByOpenidAndBookIdAndNextReviewDateLessThanEqual(openid, bookId, LocalDate.now())
+                .stream().filter(r -> r.getMemoryStrength() < 0.8).collect(Collectors.toList());
     }
 
     public UserWordReview learnNewWord(String openid, String wordId, String bookId) {

@@ -12,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -44,6 +45,8 @@ public class DictController {
     private QuestionService questionService;
     @Autowired
     private WrongQuestionService wrongQuestionService;
+    @Autowired
+    private CheckinService checkinService;
 
     @GetMapping("/english/words/{wordId}")
     public ResponseEntity<Word> getWordById(@PathVariable String wordId) {
@@ -154,7 +157,9 @@ public class DictController {
             @RequestParam String bookId,
             @RequestParam int quality
     ) {
-        return reviewService.reviewWord(openid, wordId, bookId, quality);
+        UserWordReview userWordReview = reviewService.reviewWord(openid, wordId, bookId, quality);
+        this.checkinService.autoCheckinIfNeeded(openid, bookId);
+        return userWordReview;
     }
 
     @GetMapping("/english/words/review/today")
@@ -168,7 +173,9 @@ public class DictController {
             @RequestParam String wordId,
             @RequestParam String bookId
     ) {
-        return reviewService.learnNewWord(openid, wordId, bookId);
+        UserWordReview userWordReview = reviewService.learnNewWord(openid, wordId, bookId);
+        this.checkinService.autoCheckinIfNeeded(openid, bookId);
+        return userWordReview;
     }
 
     @GetMapping("/english/words/review/distractors")
