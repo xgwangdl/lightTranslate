@@ -4,15 +4,13 @@ import com.alibaba.nacos.api.model.v2.Result;
 import com.jayway.jsonpath.JsonPath;
 import com.light.translate.communicate.data.User;
 import com.light.translate.communicate.repository.UserRepository;
+import com.light.translate.communicate.services.UserService;
 import lombok.Data;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
@@ -33,6 +31,8 @@ public class AuthController {
     @Autowired
     private UserRepository userRepo;
     private boolean isNewUser = false;
+    @Autowired
+    private UserService userService;
 
     // 静默登录接口
     @PostMapping("/silentLogin")
@@ -66,6 +66,11 @@ public class AuthController {
 
         String response = restTemplate.getForObject(url, String.class);
         return JsonPath.parse(response).read("$.openid");
+    }
+
+    @PostMapping("/book")
+    public User updateUserBookId(@RequestParam String openid, @RequestParam String bookId) {
+        return userService.updateBookId(openid, bookId);
     }
 }
 

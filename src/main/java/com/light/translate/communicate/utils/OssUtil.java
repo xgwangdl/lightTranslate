@@ -1,7 +1,9 @@
 package com.light.translate.communicate.utils;
 
+import com.aliyun.oss.ClientBuilderConfiguration;
 import com.aliyun.oss.OSS;
 import com.aliyun.oss.OSSClientBuilder;
+import com.aliyun.oss.common.comm.Protocol;
 import com.aliyun.oss.model.CannedAccessControlList;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -53,10 +55,15 @@ public class OssUtil {
     }
 
     public String getUrl(String key) {
-        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
-        Date expiration = new Date(System.currentTimeMillis() +  1 * 60 * 60 * 1000);
-        URL signedUrl = ossClient.generatePresignedUrl(bucketName, key, expiration);
-        return signedUrl.toString();
+        // 创建ClientConfiguration时指定协议
+        ClientBuilderConfiguration config = new ClientBuilderConfiguration();
+        config.setProtocol(Protocol.HTTPS); // 强制使用HTTPS
+
+        OSS ossClient = new OSSClientBuilder()
+                .build(endpoint, accessKeyId, accessKeySecret, config);
+
+        Date expiration = new Date(System.currentTimeMillis() + 1 * 60 * 60 * 1000);
+        return ossClient.generatePresignedUrl(bucketName, key, expiration).toString();
     }
 }
 

@@ -1,24 +1,24 @@
 package com.light.translate.communicate.controller;
 
-import com.alibaba.dashscope.exception.InputRequiredException;
-import com.alibaba.dashscope.exception.NoApiKeyException;
-import com.alibaba.nacos.api.model.v2.Result;
 import com.light.translate.communicate.data.*;
 import com.light.translate.communicate.dto.*;
 import com.light.translate.communicate.services.*;
+import com.light.translate.communicate.translate.TextToSpeechService;
 import com.light.translate.communicate.utils.OssUtil;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -47,6 +47,10 @@ public class DictController {
     private WrongQuestionService wrongQuestionService;
     @Autowired
     private CheckinService checkinService;
+    @Autowired
+    private SentenceService sentenceService;
+    @Autowired
+    private TextToSpeechService textToSpeechService;
 
     @GetMapping("/english/words/{wordId}")
     public ResponseEntity<Word> getWordById(@PathVariable String wordId) {
@@ -242,6 +246,30 @@ public class DictController {
     public ResponseEntity<List<WordBook>> listUserWrongBooks(@RequestParam String openid) {
         List<WordBook> books = wrongQuestionService.findUserWrongBooks(openid);
         return ResponseEntity.ok(books);
+    }
+
+    @GetMapping("/english/words/question/sentence")
+    public void getSentence(HttpServletResponse response) throws IOException {
+        this.sentenceService.saveSentence();
+    }
+
+    @GetMapping("/english/words/sentence/today")
+    public Sentence getTodaySentences() {
+        return sentenceService.findTopByOrderByCreateTimeDesc();
+    }
+
+    @GetMapping("/english/words/sentence/{date}")
+    public Sentence getSentenceByDate(@PathVariable String date) {
+        // 将字符串日期转换为 LocalDate
+        LocalDate localDate = LocalDate.parse(date);
+
+        // 获取当天的开始时间（00:00:00）
+        LocalDateTime startOfDay = localDate.atStartOfDay();
+
+        // 获取当天的结束时间（23:59:59.999）
+        LocalDateTime endOfDay = localDate.atTime(LocalTime.MAX);
+        // 获取并返回指定日期的句子
+        return sentenceService.findByCreateTimeBetween(startOfDay, endOfDay).get(0);
     }
 }
 

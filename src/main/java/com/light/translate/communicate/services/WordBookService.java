@@ -17,7 +17,7 @@ public class WordBookService {
 
 
     public List<WordBook> getAllBooks() {
-        return repository.findAll();
+        return repository.findAllByOrderBySortAscBookIdAsc();
     }
 
 

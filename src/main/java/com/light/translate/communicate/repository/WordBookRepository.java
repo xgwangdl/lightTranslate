@@ -8,5 +8,6 @@ import java.util.List;
 public interface WordBookRepository extends JpaRepository<WordBook, String> {
     WordBook findByBookId(String bookId);
     List<WordBook> findAllById(Iterable<String> bookIds);
+    List<WordBook> findAllByOrderBySortAscBookIdAsc();
 }
 

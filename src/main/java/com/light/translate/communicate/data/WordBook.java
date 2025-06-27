@@ -20,6 +20,9 @@ public class WordBook {
 
     @Column(name = "word_count")
     private Integer wordCount;
+
+    @Column(name = "sort")
+    private Integer sort;
 }
 
 
