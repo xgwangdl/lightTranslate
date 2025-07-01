@@ -22,6 +22,8 @@ public class Sentence {
 
     private String url;   // 相关链接，如图片或分享地址
 
+    private String imageUrl;
+
     private LocalDateTime createTime;  // 生成时间
 
     @PrePersist

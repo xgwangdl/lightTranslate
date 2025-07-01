@@ -1,6 +1,7 @@
 package com.light.translate.communicate.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.light.translate.communicate.ali.ImageSynthesis;
 import com.light.translate.communicate.data.Sentence;
 import com.light.translate.communicate.repository.SentenceRepository;
 import com.light.translate.communicate.translate.TextToSpeechService;
@@ -37,6 +38,9 @@ public class SentenceService {
     @Autowired
     private OssUtil ossUtil;
 
+    @Autowired
+    private ImageSynthesis imageSynthesis;
+
     @Scheduled(cron = "0 0 1 * * ?")
     public void executeDailyTask() throws JsonProcessingException {
         System.out.println("Executing daily sentence save task...");
@@ -67,6 +71,12 @@ public class SentenceService {
         String url = ossUtil.upload(is, "sentence.mp3");
         sentence.setUrl(url);
 
+        try {
+            String imageUrl = this.imageSynthesis.basicCall(sentence.getCn());
+            sentence.setImageUrl(imageUrl);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         // 保存到数据库
         sentenceRepository.save(sentence);
     }

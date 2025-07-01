@@ -1,5 +1,8 @@
 package com.light.translate.communicate.controller;
 
+import com.alibaba.dashscope.aigc.imagesynthesis.ImageSynthesisResult;
+import com.alibaba.dashscope.exception.NoApiKeyException;
+import com.light.translate.communicate.ali.ImageSynthesis;
 import com.light.translate.communicate.data.*;
 import com.light.translate.communicate.dto.*;
 import com.light.translate.communicate.services.*;
@@ -51,6 +54,8 @@ public class DictController {
     private SentenceService sentenceService;
     @Autowired
     private TextToSpeechService textToSpeechService;
+    @Autowired
+    private ImageSynthesis imageSynthesis;
 
     @GetMapping("/english/words/{wordId}")
     public ResponseEntity<Word> getWordById(@PathVariable String wordId) {
@@ -270,6 +275,11 @@ public class DictController {
         LocalDateTime endOfDay = localDate.atTime(LocalTime.MAX);
         // 获取并返回指定日期的句子
         return sentenceService.findByCreateTimeBetween(startOfDay, endOfDay).get(0);
+    }
+
+    @GetMapping("/english/words/question/sentence/poster")
+    public String poster(@RequestParam String cntext) throws NoApiKeyException {
+        return imageSynthesis.basicCall(cntext);
     }
 }
 
