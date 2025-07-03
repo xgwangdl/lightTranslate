@@ -56,6 +56,8 @@ public class DictController {
     private TextToSpeechService textToSpeechService;
     @Autowired
     private ImageSynthesis imageSynthesis;
+    @Autowired
+    private DailyArticleShareService dailyArticleShareService;
 
     @GetMapping("/english/words/{wordId}")
     public ResponseEntity<Word> getWordById(@PathVariable String wordId) {
@@ -279,7 +281,30 @@ public class DictController {
 
     @GetMapping("/english/words/question/sentence/poster")
     public String poster(@RequestParam String cntext) throws NoApiKeyException {
-        return imageSynthesis.basicCall(cntext);
+        return imageSynthesis.makeSentenceImage(cntext);
+    }
+
+    @GetMapping("/english/words/airticle/poster")
+    public void airticle() throws NoApiKeyException, IOException {
+        this.dailyArticleShareService.saveSentence();
+    }
+
+    @GetMapping("/english/words/airticle/today")
+    public DailyArticleShare getTodayArticle() {
+        return dailyArticleShareService.findTopByOrderByCreateTimeDesc();
+    }
+    @GetMapping("/english/words/airticle/{date}")
+    public DailyArticleShare getArticleByDate(@PathVariable String date) {
+        // 将字符串日期转换为 LocalDate
+        LocalDate localDate = LocalDate.parse(date);
+
+        // 获取当天的开始时间（00:00:00）
+        LocalDateTime startOfDay = localDate.atStartOfDay();
+
+        // 获取当天的结束时间（23:59:59.999）
+        LocalDateTime endOfDay = localDate.atTime(LocalTime.MAX);
+        // 获取并返回指定日期的句子
+        return dailyArticleShareService.findByCreateTimeBetween(startOfDay, endOfDay).get(0);
     }
 }
 

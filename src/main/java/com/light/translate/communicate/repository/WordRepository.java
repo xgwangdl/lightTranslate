@@ -27,4 +27,5 @@ public interface WordRepository extends JpaRepository<Word, String> {
 
     @Query(value = "SELECT * FROM words WHERE head_word != :exclude ORDER BY RAND() LIMIT :count", nativeQuery = true)
     List<Word> findRandomWordsExclude(@Param("exclude") String exclude, @Param("count") int count);
+
 }

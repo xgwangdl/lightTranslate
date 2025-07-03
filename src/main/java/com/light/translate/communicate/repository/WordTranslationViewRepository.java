@@ -29,5 +29,10 @@ public interface WordTranslationViewRepository extends JpaRepository<WordTransla
             nativeQuery = true)
     Page<WordTranslationView> findUnionLike(@Param("prefix") String prefix, Pageable pageable);
 
+    @Query(value = "SELECT * FROM word_translation_view_cache WHERE word_id LIKE CONCAT(:bookId, '%') AND pos = 'n' LIMIT 1 OFFSET :offset", nativeQuery = true)
+    WordTranslationView findWordByOffsetByBookAndPos(@Param("bookId") String bookId, @Param("offset") int offset);
+
+    @Query(value = "SELECT COUNT(*) FROM word_translation_view_cache WHERE word_id LIKE CONCAT(:bookId, '%') AND pos = 'n'", nativeQuery = true)
+    long countAllWordsByBook(@Param("bookId") String bookI);
 }
 

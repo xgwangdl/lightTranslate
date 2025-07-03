@@ -2,7 +2,10 @@ package com.light.translate.communicate.services;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.light.translate.communicate.ali.ImageSynthesis;
+import com.light.translate.communicate.data.DailyArticleShare;
 import com.light.translate.communicate.data.Sentence;
+import com.light.translate.communicate.dto.WordsDetailDTO;
+import com.light.translate.communicate.repository.DailyArticleShareRepository;
 import com.light.translate.communicate.repository.SentenceRepository;
 import com.light.translate.communicate.translate.TextToSpeechService;
 import com.light.translate.communicate.utils.OssUtil;
@@ -16,6 +19,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.DayOfWeek;
@@ -24,13 +28,13 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
-public class SentenceService {
+public class DailyArticleShareService {
 
     @Value("${spring.ai.deepseek.api-key}")
     private String token;
 
     @Autowired
-    private SentenceRepository sentenceRepository;
+    private DailyArticleShareRepository repository;
 
     @Autowired
     private TextToSpeechService textToSpeechService;
@@ -41,24 +45,47 @@ public class SentenceService {
     @Autowired
     private ImageSynthesis imageSynthesis;
 
-    @Scheduled(cron = "0 0 1 * * ?")
-    public void executeDailyTask() throws JsonProcessingException {
+    @Autowired
+    private WordService wordService;
+
+    @Scheduled(cron = "0 0 2 * * ?")
+    public void executeDailyTask() throws IOException {
         System.out.println("Executing daily sentence save task...");
         saveSentence();
     }
 
-    public void saveSentence() throws JsonProcessingException {
-        String json = makeSentence();
+    public void saveSentence() throws IOException {
+        String json = makeArticle();
 
         // 清理掉 `json` 和多余的反引号
         String cleanedJson = cleanJson(json);
 
         // 解析 cleanedJson
         ObjectMapper objectMapper = new ObjectMapper();
-        Sentence sentence = objectMapper.readValue(cleanedJson, Sentence.class);
+        JsonNode node = objectMapper.readTree(cleanedJson);
 
-        // 设置生成日期和URL
-        sentence.setCreateTime(LocalDateTime.now());
+        DailyArticleShare entity = new DailyArticleShare();
+        entity.setTitle(node.get("title").asText());
+        entity.setContentEn(node.get("en").asText());
+        entity.setContentZh(node.get("cn").asText());
+        entity.setCentral(objectMapper.writeValueAsString(node.get("central")));
+
+        entity.setQuestion1(node.get("question1").asText());
+        entity.setOptions1(objectMapper.writeValueAsString(node.get("options1"))); // 转成 JSON 字符串
+        entity.setAnswer1(node.get("answer1").asText());
+
+        entity.setQuestion2(node.get("question2").asText());
+        entity.setOptions2(objectMapper.writeValueAsString(node.get("options2")));
+        entity.setAnswer2(node.get("answer2").asText());
+
+        entity.setCreateTime(LocalDateTime.now());
+
+        try {
+            String imageUrl = this.imageSynthesis.makeStoryImage(entity.getContentZh());
+            entity.setImageUrl(imageUrl);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         // 获取当前日期
         LocalDate today = LocalDate.now();
@@ -66,54 +93,55 @@ public class SentenceService {
 
         // 根据星期几替换tip
         String voice = this.getVoiceForDay(dayOfWeek);
-        byte[] tts = textToSpeechService.tts(sentence.getEn(), voice);
+        byte[] tts = textToSpeechService.tts(entity.getContentEn(), voice);
         InputStream is = new ByteArrayInputStream(tts);
-        String url = ossUtil.upload(is, "sentence.mp3");
-        sentence.setUrl(url);
+        String url = ossUtil.upload(is, "article.mp3");
+        entity.setAudioUrl(url); // 可选：音频
 
-        try {
-            String imageUrl = this.imageSynthesis.makeSentenceImage(sentence.getCn());
-            sentence.setImageUrl(imageUrl);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        // 保存到数据库
-        sentenceRepository.save(sentence);
+        repository.save(entity);
     }
 
-    private String makeSentence() throws JsonProcessingException {
+    public String makeArticle() throws IOException {
         String url = "https://api.deepseek.com/chat/completions";
 
         // 1. 构造请求体
         Map<String, Object> message1 = new HashMap<>();
         message1.put("role", "system");
         message1.put("content", """
-                你是一个优秀的英语文学家，可以写出很优美的英语句子
+                你是一个优秀的英语文学家，语言学家，教育家，作家
                 """);
 
         // 获取当前日期
         LocalDate today = LocalDate.now();
         DayOfWeek dayOfWeek = today.getDayOfWeek();
 
+        String word = this.getWordForDay(dayOfWeek);
         // 根据星期几替换tip
-        String tip = getTipForDay(dayOfWeek);
+        String difficulty = getTipForDay(dayOfWeek);
 
         Map<String, Object> message2 = new HashMap<>();
         message2.put("role", "user");
         String content = """
-                生成一句英文学习句子，要求：
-                1. 包含1个四六级高频词
-                2. 长度<30单词
-                3. 附带中文翻译和语法点、
-                4. """ + tip + """
-                5. 句子要优美富有文学色彩
+                给我写一篇英文小故事
+                要求：
+                1.短小精悍的故事（100~300字）包含该词""" + word +
+                """
+                2.目标受众是大学生，风格轻松有趣、帮助记忆。
+                3.返回英文以及翻译。并出两道测试题包含答案。还有个属性central是重点单词解释。
+                4.难度""" + difficulty + """
                 6. 返回json字符串
                 生成的例句：
                 {
+                  "title": "The "Brilliant" Thesis"
                   "en": "Persistence is the key to success.",
                   "cn": "坚持是成功的关键。",
-                  "tip": "key在这里是名词，意为'关键'",
-                  "word": "persistence [ˌpɜːrˈsɪstəns] n.坚持"
+                  "central": "重点单词解释",
+                  "question1": "What is the main message of the quote?",
+                  "options1": ["A. Success lasts forever", "B. Failure is the end", "C. Courage matters most", "D. Final results count"],
+                  "answer1": "C",
+                  "question2": "Who is the quote often attributed to?",
+                  "options2": ["A. Einstein", "B. Churchill", "C. Lincoln", "D. Roosevelt"],
+                  "answer2": "B",
                 }
                 """;
         message2.put("content", content);
@@ -174,19 +202,19 @@ public class SentenceService {
     private String getTipForDay(DayOfWeek dayOfWeek) {
         switch (dayOfWeek) {
             case MONDAY:
-                return "日常英语，要求像诗一样优美";
+                return "大学英语四级";
             case TUESDAY:
-                return "使用大学英语四级语法";
+                return "大学英语六级";
             case WEDNESDAY:
-                return "使用大学英语六级语法";
+                return "大学商务英语";
             case THURSDAY:
-                return "使用雅思英语句式";
+                return "雅思阅读";
             case FRIDAY:
-                return "使用GRE英语句式";
+                return "GRE阅读";
             case SATURDAY:
-                return "使用托福英语句式";
+                return "托福阅读";
             case SUNDAY:
-                return "使用考研英语语法";
+                return "考研阅读";
             default:
                 return "电影英语";
         }
@@ -213,6 +241,37 @@ public class SentenceService {
         }
     }
 
+    private String getWordForDay(DayOfWeek dayOfWeek) throws IOException {
+        String word;
+        switch (dayOfWeek) {
+            case MONDAY:
+                word = this.wordService.getWordByPos("CET4_2");
+                break;
+            case TUESDAY:
+                word = this.wordService.getWordByPos("CET6_2");
+                break;
+            case WEDNESDAY:
+                word = this.wordService.getWordByPos("BEC_2");
+                break;
+            case THURSDAY:
+                word = this.wordService.getWordByPos("IELTS_3");
+                break;
+            case FRIDAY:
+                word = this.wordService.getWordByPos("GRE_3");
+                break;
+            case SATURDAY:
+                word = this.wordService.getWordByPos("TOEFL_2");
+                break;
+            case SUNDAY:
+                word = this.wordService.getWordByPos("KaoYan_2");
+                break;
+            default:
+                word = this.wordService.getWordByPos("KaoYan_2");
+                break;
+        }
+        return word;
+    }
+
     private String cleanJson(String rawJson) {
         // 1. 去掉开始的 ` ```json `
         // 2. 去掉结束的 ` ``` `
@@ -220,11 +279,11 @@ public class SentenceService {
         return rawJson;
     }
 
-    public List<Sentence> findByCreateTimeBetween(LocalDateTime start, LocalDateTime end) {
-        return sentenceRepository.findByCreateTimeBetween(start, end);
+    public List<DailyArticleShare> findByCreateTimeBetween(LocalDateTime start, LocalDateTime end) {
+        return this.repository.findByCreateTimeBetween(start, end);
     }
 
-    public Sentence findTopByOrderByCreateTimeDesc() {
-        return sentenceRepository.findTopByOrderByCreateTimeDesc();
+    public DailyArticleShare findTopByOrderByCreateTimeDesc() {
+        return repository.findTopByOrderByCreateTimeDesc();
     }
 }

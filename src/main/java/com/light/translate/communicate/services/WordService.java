@@ -128,6 +128,13 @@ public class WordService {
         }
     }
 
+    public String getWordByPos(String bookId) throws IOException {
+        long count = wordTranslationViewRepository.countAllWordsByBook(bookId);
+        if (count == 0) return null;
+        int index = new Random().nextInt((int) count);
+        String headWord = wordTranslationViewRepository.findWordByOffsetByBookAndPos(bookId,  index).getHeadWord();
+        return headWord;
+    }
 
     public WordsDetailDTO getWordDetail(String wordId) {
         Word word = wordRepository.findById(wordId)

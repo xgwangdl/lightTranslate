@@ -28,28 +28,32 @@ public class ImageSynthesis {
     private OssUtil ossUtil;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-    public String basicCall(String cnText) throws ApiException, NoApiKeyException {
-        String taskId = this.createAsyncTask(cnText);
-        return this.waitAsyncTask(taskId);
-    }
-
-    /**
-     * 创建异步任务
-     * @return taskId
-     */
-    public String createAsyncTask(String cnText) {
+    public String makeSentenceImage(String cnText) throws ApiException, NoApiKeyException {
         String prompt = """
                 根据""" + cnText + """
                 意思生成海报图片，这个海报主要是用于微信小程序每日美句分享。
                 要求：简约风格, 留白区域, 适合文字排版,图片上不要有文字
                 """;
+        String taskId = this.createAsyncTask(prompt,"720*1280");
+        return this.waitAsyncTask(taskId);
+    }
+
+    public String makeStoryImage(String central) throws NoApiKeyException, ApiException {
+        String taskId = this.createAsyncTask(central,"1280*720");
+        return this.waitAsyncTask(taskId);
+    }
+    /**
+     * 创建异步任务
+     * @return taskId
+     */
+    public String createAsyncTask(String prompt, String size) {
         ImageSynthesisParam param =
                 ImageSynthesisParam.builder()
                         .apiKey(apiKey)
                         .model(model)
                         .prompt(prompt)
                         .n(1)
-                        .size("720*1280")
+                        .size(size)
                         .build();
 
         com.alibaba.dashscope.aigc.imagesynthesis.ImageSynthesis imageSynthesis = new com.alibaba.dashscope.aigc.imagesynthesis.ImageSynthesis();
@@ -74,7 +78,7 @@ public class ImageSynthesis {
         ImageSynthesisResult result = null;
         try {
             //如果已经在环境变量中设置了 DASHSCOPE_API_KEY，wait()方法可将apiKey设置为null
-            result = imageSynthesis.wait(taskId, null);
+            result = imageSynthesis.wait(taskId, this.apiKey);
         } catch (ApiException | NoApiKeyException e){
             throw new RuntimeException(e.getMessage());
         }
