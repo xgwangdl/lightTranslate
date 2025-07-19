@@ -44,6 +44,7 @@ public class AuthController {
         User user = userRepo.findByOpenid(openid).orElseGet(() -> {
             User newUser = new User();
             newUser.setOpenid(openid);
+            newUser.setBookId("BEC_2");
             if (request.getUserInfo() != null) {
                 newUser.setNickname(request.getUserInfo().getNickName());
                 newUser.setAvatarUrl(request.getUserInfo().getAvatarUrl());

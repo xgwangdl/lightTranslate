@@ -65,5 +65,27 @@ public class OssUtil {
         Date expiration = new Date(System.currentTimeMillis() + 1 * 60 * 60 * 1000);
         return ossClient.generatePresignedUrl(bucketName, key, expiration).toString();
     }
+
+    public String uploadForBucketName(String bucketName, String fileHost, InputStream inputStream, String originalFileName) {
+        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+
+        try {
+            String suffix = originalFileName.substring(originalFileName.lastIndexOf("."));
+            String objectName = fileHost + UUID.randomUUID() + suffix;
+
+            ossClient.putObject(bucketName, objectName, inputStream);
+
+            // 设置 URL 有效期为 30 天（单位：毫秒）
+            Date expiration = new Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000);
+            URL signedUrl = ossClient.generatePresignedUrl(bucketName, objectName, expiration);
+
+            return signedUrl.toString();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            ossClient.shutdown();
+        }
+    }
 }
 

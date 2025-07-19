@@ -19,11 +19,11 @@ async def generate_audio(text, voice):
         logging.info(f"开始生成音频，文本: {text}, 语音: {voice}")
 
         # 记录参数检查
-        logging.debug(f"参数检查 - rate: +5%, pitch: +10Hz")
+        logging.debug(f"参数检查 - rate: +0%, pitch: +10Hz")
         communicate = edge_tts.Communicate(
             text=text,
             voice=voice,
-            rate="+5%",
+            rate="+0%",
             pitch="+10Hz"
         )
 

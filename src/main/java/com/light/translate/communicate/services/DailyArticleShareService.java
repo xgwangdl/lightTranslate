@@ -135,7 +135,7 @@ public class DailyArticleShareService {
                   "title": "The "Brilliant" Thesis"
                   "en": "Persistence is the key to success.",
                   "cn": "坚持是成功的关键。",
-                  "central": "重点单词解释",
+                  "central": "Persistence:坚持不懈",
                   "question1": "What is the main message of the quote?",
                   "options1": ["A. Success lasts forever", "B. Failure is the end", "C. Courage matters most", "D. Final results count"],
                   "answer1": "C",
