@@ -50,7 +50,14 @@ async def generate_audio(text, voice):
         logging.debug(f"重采样后 - 采样率: {audio.frame_rate}Hz")
 
         output_stream = BytesIO()
-        audio.export(output_stream, format="mp3")
+        # audio.export(output_stream, format="mp3")
+        audio.export(
+            output_stream,
+            format="mp3",
+            codec="libmp3lame",
+            bitrate="128k",
+            parameters=["-ac", "1"]
+        )
         output_stream.seek(0)
         logging.info(f"音频处理完成，输出大小: {output_stream.getbuffer().nbytes} bytes")
 

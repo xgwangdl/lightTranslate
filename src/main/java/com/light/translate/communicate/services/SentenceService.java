@@ -82,6 +82,42 @@ public class SentenceService {
     }
 
     private String makeSentence() throws JsonProcessingException {
+        List<String> cetWords = Arrays.asList(
+                "abandon", "abolish", "absorb", "abstract", "abundant", "accelerate", "access", "accommodate", "accompany", "accomplish",
+                "account", "accumulate", "accurate", "accuse", "acknowledge", "acquire", "activate", "adapt", "addict", "address",
+                "adequate", "adjust", "administer", "admire", "adopt", "adore", "advance", "advertise", "advocate", "afford", "agency",
+                "aggressive", "aid", "aim", "aircraft", "allocate", "alter", "alternative", "amateur", "amaze", "ambiguous",
+                "ambition", "amount", "amplify", "amuse", "analyse", "analyze", "ancestor", "annual", "anticipate", "anxiety",
+                "apologize", "apparent", "appeal", "appetite", "apply", "appoint", "appreciate", "approach", "appropriate", "approve", "arbitrary",
+                "architect", "arise", "arrange", "arrest", "artificial", "ashamed", "aspect", "assemble", "assert", "assess",
+                "assign", "assist", "associate", "assume", "assure", "astonish", "attach", "attain", "attempt", "attend",
+                "attract", "attribute", "author", "automatic", "aware", "awkward", "balance", "ban", "barrier", "behave",
+                "belief", "belong", "beneficial", "benefit", "betray", "bias", "bind", "biography", "blame", "boost",
+                "border", "borrow", "bother", "brand", "brief", "broadcast", "burden", "calculate", "capture", "capacity",
+                "capable", "cease", "ceremony", "chain", "challenge", "champion", "characteristic", "charity", "cherish", "chief",
+                "circumstance", "claim", "clarify", "classify", "client", "collapse", "colleague", "comfort", "command", "commence",
+                "comment", "commercial", "commit", "communicate", "compare", "compete", "compile", "complement", "complicate", "component",
+                "compose", "comprehend", "conceal", "concentrate", "concept", "concern", "conclude", "concrete", "condemn", "conduct",
+                "conference", "confess", "confidence", "confirm", "conflict", "confront", "confuse", "congratulate", "connect", "conquer",
+                "conscious", "consent", "consequence", "conservative", "considerable", "consist", "consistent", "constant", "construct", "consult",
+                "consume", "contact", "contain", "contemporary", "contend", "content", "contest", "continue", "contract", "contribute",
+                "controversy", "convenience", "convey", "convince", "cooperate", "coordinate", "core", "corporate", "correspond", "corrupt",
+                "cost", "council", "counsel", "create", "creature", "credit", "crew", "crisis", "critic", "crucial",
+                "cultivate", "cure", "current", "curve", "damage", "deal", "debate", "decade", "deceive", "declare",
+                "decline", "decorate", "decrease", "dedicate", "defeat", "defend", "define", "delay", "deliberate", "deliver",
+                "demand", "demonstrate", "deny", "depart", "depend", "depict", "deposit", "depress", "derive", "descend",
+                "describe", "deserve", "desire", "despair", "desperate", "destroy", "detect", "determine", "develop", "devote",
+                "differ", "digest", "diminish", "dine", "direct", "disappear", "disappoint", "disaster", "discipline", "disclose",
+                "discount", "discover", "discriminate", "discuss", "dismiss", "display", "dispose", "dissolve", "distinct", "distinguish",
+                "distract", "distribute", "disturb", "diverse", "divide", "document", "domestic", "dominate", "donate", "doubt",
+                "draft", "dramatic", "drastic", "draw", "drill", "due", "duration", "dynamic", "eager", "earn",
+                "ease", "elaborate", "elect", "eliminate", "emerge", "emphasis", "employ", "enable", "encounter", "encourage",
+                "endanger", "engage", "enhance", "enjoy", "enlighten", "ensure", "entertain", "enthusiasm", "entire", "entitle"
+        );
+
+        Random random = new Random();
+        String randomWord = cetWords.get(random.nextInt(cetWords.size()));
+
         String url = "https://api.deepseek.com/chat/completions";
 
         // 1. 构造请求体
@@ -102,19 +138,17 @@ public class SentenceService {
         message2.put("role", "user");
         String content = """
                 生成一句英文学习句子，要求：
-                1. 包含1个四六级高频词
-                2. 长度<30单词
-                3. 附带中文翻译和语法点、
-                4. """ + tip + """
-                5. 句子要优美富有文学色彩
-                6. 返回json字符串
-                生成的例句：
-                {
-                  "en": "Persistence is the key to success.",
-                  "cn": "坚持是成功的关键。",
-                  "tip": "key在这里是名词，意为'关键'",
-                  "word": "persistence [ˌpɜːrˈsɪstəns] n.坚持"
-                }
+                1.必须使用给定的一个单词:""" + randomWord + """
+                2.长度<30单词
+                3.提供对应的中文翻译。
+                4.解释句中涉及的一个语法点。
+                5.""" + tip + """
+                6.句子需贴近现实生活或励志主题，但富有画面感。
+                7. 返回标准 JSON 字符串，键为：
+                   - "en": 英文句子
+                   - "cn": 中文翻译
+                   - "tip": 语法点解释
+                   - "word": "目标高频词 + 音标 + 词性 + 中文释义"
                 """;
         message2.put("content", content);
 

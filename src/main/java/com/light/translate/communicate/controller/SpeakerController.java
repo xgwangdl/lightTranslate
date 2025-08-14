@@ -2,8 +2,10 @@ package com.light.translate.communicate.controller;
 
 import com.light.translate.communicate.ali.SpeakerAssistant;
 import com.light.translate.communicate.data.SceneTheme;
+import com.light.translate.communicate.data.UserDailyQuota;
 import com.light.translate.communicate.dto.SpeakerResponse;
 import com.light.translate.communicate.services.AliSpeechRecognizer;
+import com.light.translate.communicate.services.QuotaService;
 import com.light.translate.communicate.services.SceneThemeService;
 import com.light.translate.communicate.translate.AudioConverter;
 import com.light.translate.communicate.translate.TextToSpeechService;
@@ -19,7 +21,9 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/dict/speaker")
@@ -33,11 +37,13 @@ public class SpeakerController {
     private String bucketName;
     private final AliSpeechRecognizer aliSpeechRecognizer;
     private final SceneThemeService service;
+    private final QuotaService quotaService;
 
     @PostMapping("/chat")
     public SpeakerResponse chat(@RequestParam("openid") String openid,
                                 @RequestParam("systemParams") String systemParams,
                                 @RequestParam("voice") String voice,
+                                @RequestParam("level") String level,
                                 @RequestPart("audio") MultipartFile audioFile) throws IOException, InterruptedException {
         // 保存临时文件
         File tempFile = File.createTempFile("upload", ".wav");
@@ -45,7 +51,7 @@ public class SpeakerController {
         File convertFile = AudioConverter.convertToWav(tempFile);
 
         String userMessageContent = aliSpeechRecognizer.recognizeSentences(convertFile);
-        String content =  speakerAssistant.chat(openid, userMessageContent, systemParams);
+        String content =  speakerAssistant.chat(openid, userMessageContent, systemParams, level);
         convertFile.delete();
 
         byte[] bytes = textToSpeechService.tts(content, voice);
@@ -80,5 +86,34 @@ public class SpeakerController {
     @GetMapping("/random-three")
     public List<SceneTheme> getRandomThreeEnabled() {
         return service.getRandomThreeEnabled();
+    }
+
+    // 获取今日剩余次数和分享状态
+    @GetMapping("/remaining")
+    public ResponseEntity<Map<String, Object>> getRemaining(@RequestParam String openid) {
+        UserDailyQuota quota = quotaService.getQuotaInfo(openid);
+        int remaining = quotaService.getRemaining(openid);
+        Map<String, Object> result = new HashMap<>();
+        result.put("remaining", remaining);
+        result.put("shared", quota.getShared());
+        return ResponseEntity.ok(result);
+    }
+
+    // 使用一次练习机会
+    @PostMapping("/use")
+    public ResponseEntity<?> usePractice(@RequestParam String openid) {
+        if (!quotaService.canPractice(openid)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("今日练习次数已达上限");
+        }
+        quotaService.incrementPractice(openid);
+        return ResponseEntity.ok("使用成功");
+    }
+
+    // 分享成功后调用，解锁额外机会
+    @PostMapping("/share")
+    public ResponseEntity<?> shareSuccess(@RequestParam String openid) {
+        quotaService.unlockByShare(openid);
+        return ResponseEntity.ok("分享成功，已解锁额外练习次数");
     }
 }

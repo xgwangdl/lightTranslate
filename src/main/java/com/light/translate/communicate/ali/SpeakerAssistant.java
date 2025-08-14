@@ -28,14 +28,15 @@ public class SpeakerAssistant {
     }
 
 
-    public String chat(String chatId, String userMessageContent, String systemParams) {
+    public String chat(String chatId, String userMessageContent, String systemParams, String level) {
 
         return this.chatClient.prompt()
-                .system(s -> s.param("character_description", systemParams))
+                .system(s -> s.param("character_description", systemParams)
+                        .param("level", level))
                 .user(userMessageContent)
                 .advisors(a -> a
                         .param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
-                        .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 10))
+                        .param(CHAT_MEMORY_RETRIEVE_SIZE_KEY, 20))
                 .call().content();
     }
 
