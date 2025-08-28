@@ -54,6 +54,25 @@ public class OssUtil {
         }
     }
 
+    public String upload2(InputStream inputStream, String originalFileName) {
+        OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
+
+        try {
+            String suffix = originalFileName.substring(originalFileName.lastIndexOf("."));
+            String objectName = "examplemp3/" + UUID.randomUUID() + suffix;
+
+            ossClient.putObject(bucketName, objectName, inputStream);
+
+
+            return objectName;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        } finally {
+            ossClient.shutdown();
+        }
+    }
+
     public String getUrl(String key) {
         // 创建ClientConfiguration时指定协议
         ClientBuilderConfiguration config = new ClientBuilderConfiguration();
