@@ -5,17 +5,21 @@ import com.light.translate.communicate.data.SceneTheme;
 import com.light.translate.communicate.data.UserDailyQuota;
 import com.light.translate.communicate.dto.SpeakerResponse;
 import com.light.translate.communicate.services.AliSpeechRecognizer;
+import com.light.translate.communicate.services.OmniService;
 import com.light.translate.communicate.services.QuotaService;
 import com.light.translate.communicate.services.SceneThemeService;
 import com.light.translate.communicate.translate.AudioConverter;
 import com.light.translate.communicate.translate.TextToSpeechService;
 import com.light.translate.communicate.utils.OssUtil;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.util.StopWatch;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import reactor.core.publisher.Flux;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -24,11 +28,14 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 
 @RestController
 @RequestMapping("/api/dict/speaker")
 @RequiredArgsConstructor
 public class SpeakerController {
+    private static final Logger log = LoggerFactory.getLogger(SpeakerController.class);
 
     private final SpeakerAssistant speakerAssistant;
     private final TextToSpeechService textToSpeechService;
@@ -38,6 +45,7 @@ public class SpeakerController {
     private final AliSpeechRecognizer aliSpeechRecognizer;
     private final SceneThemeService service;
     private final QuotaService quotaService;
+    private final OmniService omniService;
 
     @PostMapping("/chat")
     public SpeakerResponse chat(@RequestParam("openid") String openid,
@@ -45,21 +53,20 @@ public class SpeakerController {
                                 @RequestParam("voice") String voice,
                                 @RequestParam("level") String level,
                                 @RequestPart("audio") MultipartFile audioFile) throws IOException, InterruptedException {
+        StringBuilder sb = new StringBuilder();
         // 保存临时文件
         File tempFile = File.createTempFile("upload", ".wav");
         audioFile.transferTo(tempFile);
         File convertFile = AudioConverter.convertToWav(tempFile);
 
         String userMessageContent = aliSpeechRecognizer.recognizeSentences(convertFile);
-        String content =  speakerAssistant.chat(openid, userMessageContent, systemParams, level);
+        Flux<String> chat =  speakerAssistant.chat(openid, userMessageContent, systemParams, level);
         convertFile.delete();
+        tempFile.delete();
 
-        byte[] bytes = textToSpeechService.tts(content, voice);
+        SpeakerResponse response = omniService.getVoice(chat,voice);
 
-        InputStream is = new ByteArrayInputStream(bytes);
-        String url = ossUtil.uploadForBucketName(bucketName, "mp3", is, "audio.mp3");
-
-        return new SpeakerResponse(url,content);
+        return response;
     }
 
     @PostMapping("/tts")

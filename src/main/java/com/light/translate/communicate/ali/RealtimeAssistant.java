@@ -4,7 +4,6 @@ import lombok.SneakyThrows;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.client.advisor.PromptChatMemoryAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
@@ -14,12 +13,12 @@ import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvis
 import static org.springframework.ai.chat.client.advisor.AbstractChatMemoryAdvisor.CHAT_MEMORY_RETRIEVE_SIZE_KEY;
 
 @Service
-public class SpeakerAssistant {
+public class RealtimeAssistant {
     private final ChatClient chatClient;
 
     @SneakyThrows
-    public SpeakerAssistant(ChatClient.Builder modelBuilder, ChatMemory chatMemory,
-                            @Value("classpath:prompt/Spearker-System-Prompt.st") Resource systemText) {
+    public RealtimeAssistant(ChatClient.Builder modelBuilder, ChatMemory chatMemory,
+                            @Value("classpath:prompt/English-Teaching-Prompt.st") Resource systemText) {
 
         this.chatClient = modelBuilder.defaultSystem(systemText)
                 .defaultAdvisors(
@@ -29,11 +28,9 @@ public class SpeakerAssistant {
     }
 
 
-    public Flux<String> chat(String chatId, String userMessageContent, String systemParams, String level) {
+    public Flux<String> chat(String chatId, String userMessageContent) {
 
         return this.chatClient.prompt()
-                .system(s -> s.param("character_description", systemParams)
-                        .param("level", level))
                 .user(userMessageContent)
                 .advisors(a -> a
                         .param(CHAT_MEMORY_CONVERSATION_ID_KEY, chatId)
