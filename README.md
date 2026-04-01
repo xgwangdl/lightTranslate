@@ -26,6 +26,22 @@
 * 📸 **OCR 文字识别** - 图片文字提取与翻译
 * 📚 **智能单词本** - 完整的词汇学习体系与记忆曲线算法
 * 📊 **学习追踪** - 打卡系统、学习统计与进度管理
+---
+
+## 📱 小程序体验（Demo）
+
+### 🟢 微信扫码体验
+<img width="215" height="215" alt="image" src="https://github.com/user-attachments/assets/e51e0781-7ed0-4655-a6e2-9f213d5dc638" />
+
+
+> 使用微信扫描二维码即可体验完整功能（语音对话 / 跟读 / 翻译等）
+---
+
+### 🎬 功能演示视频
+
+<video src="https://github.com/user-attachments/assets/e5d45ae4-e195-44a1-bcd7-27ef45802427" controls width="100%"></video>
+
+> 演示内容：实时口语对话 + AI 回复 + 跟读评分
 
 ---
 
